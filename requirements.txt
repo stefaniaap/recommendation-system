@@ -1,0 +1,6 @@
+sqlalchemy
+pymysql
+pandas
+scikit-learn
+jupyter
+matplotlib
