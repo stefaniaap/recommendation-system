@@ -105,43 +105,58 @@ class CourseRecommender:
     # ==========================================================
     # 2️⃣ Εύρεση παρόμοιων πτυχίων
     # ==========================================================
+
     def find_similar_degrees(
         self,
         target_profile: Dict[str, Any],
         all_profiles: List[Dict[str, Any]],
         top_n: int = 5,
     ) -> List[Dict[str, Any]]:
-        """Επιστρέφει παρόμοια πτυχία με βάση skills + degree_type."""
+        """
+        Επιστρέφει παρόμοια πτυχία με βάση skills + courses + degree_type.
+        - Περιλαμβάνει ΠΑΝΤΑ το target vector στο fit_transform.
+        - Φιλτράρει υποψήφιους χωρίς κείμενο (άδειες λίστες).
+        - Αν δεν υπάρχουν έγκυροι υποψήφιοι, επιστρέφει [] χωρίς 500.
+        """
         if not target_profile or not all_profiles:
             return []
 
-        target_text = " ".join(target_profile.get("skills", []))
-        degree_type = target_profile.get("degree_type", "")
+        degree_type = (target_profile.get("degree_type") or "").strip()
+        # Combine skills + courses for a richer representation
+        target_text = " ".join(
+            (target_profile.get("skills") or []) +
+            (target_profile.get("courses") or [])
+        ).strip()
 
-        candidates = [
+        # Collect candidates of same degree_type but different university
+        raw_candidates = [
             p for p in all_profiles
-            if p.get("degree_type", "") == degree_type
+            if (p.get("degree_type") or "").strip() == degree_type
             and p.get("university_id") != target_profile.get("university_id")
-            and p.get("skills")
         ]
-        if not candidates:
+
+        # Build candidate documents; skip empties
+        cand_objs: List[Dict[str, Any]] = []
+        cand_texts: List[str] = []
+        for p in raw_candidates:
+            text = " ".join((p.get("skills") or []) + (p.get("courses") or [])).strip()
+            if text:
+                cand_objs.append(p)
+                cand_texts.append(text)
+
+        # If we have no target text or no valid candidates, nothing to compare
+        if not target_text or not cand_texts:
             return []
 
-      #  docs = [target_text] + [" ".join(p["skills"]) for p in candidates]
-
-         # ➕ Συνδυασμός skills + courses για πιο θεματική σύγκριση
-        docs = [
-            " ".join(p.get("skills", []) + p.get("courses", []))
-            for p in candidates
-        ]
-        target_text = " ".join(target_profile.get("skills", []) + target_profile.get("courses", []))
-
+        # Fit TF-IDF on [target] + candidates, then compare target vs candidates
         vectorizer = TfidfVectorizer()
-        vectors = vectorizer.fit_transform(docs)
+        vectors = vectorizer.fit_transform([target_text] + cand_texts)
+        # vectors[0:1] -> target, vectors[1:] -> candidates
         sims = cosine_similarity(vectors[0:1], vectors[1:]).flatten()
 
-        ranked = sorted(zip(candidates, sims), key=lambda x: x[1], reverse=True)
+        ranked = sorted(zip(cand_objs, sims), key=lambda x: x[1], reverse=True)
         return [p for p, _ in ranked[:top_n]]
+
 
     # ==========================================================
     # 3️⃣ Πρόταση μαθημάτων για ένα συγκεκριμένο πτυχίο

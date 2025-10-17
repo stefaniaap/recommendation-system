@@ -1,82 +1,129 @@
 <!DOCTYPE html>
 <html lang="el">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkillCrawl Recommendations</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillCrawl Recommendations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="bg-gray-100 font-sans min-h-screen">
+  <div class="max-w-4xl mx-auto py-10 px-6">
+    <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">
+      🎓 SkillCrawl Recommendation System
+    </h1>
 
-    <div class="max-w-4xl mx-auto py-10 px-6">
-        <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">
-            🎓 SkillCrawl Recommendation System
-        </h1>
-
-        <!-- Πανεπιστήμιο επιλογή -->
-        <div class="bg-white shadow p-6 rounded-2xl mb-6">
-            <label for="univId" class="block text-lg font-medium mb-2">
-                Πανεπιστήμιο (ID):
-            </label>
-            <input id="univId" type="number"
-                class="border border-gray-300 p-3 rounded-lg w-full mb-4 focus:ring focus:ring-blue-200"
-                placeholder="π.χ. 3" />
-
-            <button id="fetchBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-                🔍 Δημιουργία Προτάσεων
-            </button>
-        </div>
-
-        <!-- Loading -->
-        <div id="loading" class="text-center text-gray-600 hidden">⏳ Φόρτωση...</div>
-
-        <!-- Αποτελέσματα -->
-        <div id="results" class="space-y-10"></div>
+    <div class="bg-white shadow p-6 rounded-2xl mb-6">
+      <label for="univId" class="block text-lg font-medium mb-2">
+        Πανεπιστήμιο (ID):
+      </label>
+      <input id="univId" type="number"
+             class="border border-gray-300 p-3 rounded-lg w-full mb-4 focus:ring focus:ring-blue-200"
+             placeholder="π.χ. 1" />
+      <button id="fetchBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+        🔍 Δημιουργία Προτάσεων
+      </button>
     </div>
 
-    <script>
-        const API_URL = "http://127.0.0.1:8000"; // Αν χρειάζεται, άλλαξε το
+    <div id="loading" class="text-center text-gray-600 hidden">⏳ Φόρτωση.</div>
 
-        const fetchBtn = document.getElementById("fetchBtn");
-        const univInput = document.getElementById("univId");
-        const loading = document.getElementById("loading");
-        const resultsDiv = document.getElementById("results");
+    <div id="results" class="space-y-10"></div>
+  </div>
 
-        fetchBtn.addEventListener("click", async () => {
-            const univId = univInput.value.trim();
-            if (!univId) {
-                alert("Παρακαλώ εισάγετε ένα University ID!");
-                return;
-            }
+  <script>
+    const API_URL = "/api";
 
-            resultsDiv.innerHTML = "";
-            loading.classList.remove("hidden");
+    const fetchBtn   = document.getElementById("fetchBtn");
+    const univInput  = document.getElementById("univId");
+    const loading    = document.getElementById("loading");
+    const resultsDiv = document.getElementById("results");
 
-            try {
-                const res = await fetch(`${API_URL}/recommendations`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ university_id: parseInt(univId), top_k: 5 })
-                });
+    fetchBtn.addEventListener("click", async () => {
+      const univId = parseInt((univInput.value || "").trim(), 10);
+      if (!univId) {
+        alert("Παρακαλώ εισάγετε ένα University ID!");
+        return;
+      }
 
-                const data = await res.json();
-                console.log("Backend response:", data); // για έλεγχο
-                renderResults(data);
+      resultsDiv.innerHTML = "";
+      loading.classList.remove("hidden");
 
-            } catch (err) {
-                console.error(err);
-                resultsDiv.innerHTML = `<p class="text-red-600">Σφάλμα φόρτωσης δεδομένων.</p>`;
-            } finally {
-                loading.classList.add("hidden");
-            }
+      try {
+        const res = await fetch(`${API_URL}/recommendations`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ university_id: univId, top_n: 5 })
         });
 
-        function renderResults(data) {
-            if (!data) return;
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`HTTP ${res.status}: ${text}`);
+        }
 
-            resultsDiv.innerHTML = `
+        const raw = await res.json();
+        const rec = raw.recommendations || raw || {};
+        if (rec.info) {
+          resultsDiv.innerHTML = `<p class="text-gray-600 bg-yellow-50 border border-yellow-200 p-4 rounded-xl">${rec.info}</p>`;
+          return;
+        }
+        const normalized = normalize(rec);
+        renderResults(normalized);
+      } catch (err) {
+        console.error(err);
+        resultsDiv.innerHTML = `<p class="text-red-600">Σφάλμα: ${escapeHtml(err.message)}</p>`;
+      } finally {
+        loading.classList.add("hidden");
+      }
+    });
+
+    function normalize(rec) {
+      const out = {
+        missing_degrees: [],
+        missing_skills:  [],
+        missing_courses: []
+      };
+
+      const degSrc =
+        rec.missing_degrees || rec.similar_degrees || rec.degrees || rec.degree_suggestions || [];
+      out.missing_degrees = toScoredArray(degSrc);
+
+      const sklSrc =
+        rec.missing_skills || rec.skill_suggestions || rec.skills || [];
+      out.missing_skills = toScoredArray(sklSrc);
+
+      if (Array.isArray(rec.missing_courses || rec.course_suggestions || rec.courses)) {
+        const csrc = rec.missing_courses || rec.course_suggestions || rec.courses;
+        out.missing_courses = toScoredArray(csrc).map(x => ({
+          item: x.item, score: x.score, degree: x.degree
+        }));
+      } else if (rec.existing_degrees && typeof rec.existing_degrees === "object") {
+        const rows = [];
+        for (const [deg, arr] of Object.entries(rec.existing_degrees)) {
+          (arr || []).forEach(e => {
+            const item  = e.item || e.course || e.name || String(e);
+            const score = e.score ?? e.similarity ?? e.sim ?? null;
+            rows.push({ item, score, degree: deg });
+          });
+        }
+        out.missing_courses = rows;
+      }
+
+      return out;
+    }
+
+    function toScoredArray(arr) {
+      if (!Array.isArray(arr)) return [];
+      return arr.map(v => {
+        if (typeof v === "string") return ({ item: v, score: null });
+        const item   = v.item || v.name || v.degree || v.degree_title || v.course || JSON.stringify(v);
+        const score  = v.score ?? v.similarity ?? v.sim ?? null;
+        const degree = v.degree || v.degree_title;
+        return degree ? { item, score, degree } : { item, score };
+      });
+    }
+
+    function renderResults(data) {
+      resultsDiv.innerHTML = `
         <section>
           <h2 class="text-2xl font-semibold mb-4 text-blue-800">📘 Προτεινόμενα Πτυχία</h2>
           ${renderList(data.missing_degrees, "item")}
@@ -92,36 +139,42 @@
           ${renderCourses(data.missing_courses)}
         </section>
       `;
-        }
+    }
 
-        function renderList(list, key) {
-            if (!list || list.length === 0)
-                return `<p class="text-gray-500">Καμία πρόταση.</p>`;
-            return `
+    function renderList(list, key) {
+      if (!list || list.length === 0)
+        return `<p class="text-gray-500">Καμία πρόταση.</p>`;
+      return `
         <ul class="divide-y divide-gray-200 bg-white rounded-xl shadow">
           ${list.map(item => `
             <li class="p-4 flex justify-between items-center">
-              <span>${item[key]}</span>
-              <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">score: ${item.score}</span>
+              <span>${escapeHtml(item[key] ?? "")}</span>
+              <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                score: ${escapeHtml(item.score == null ? "-" : String(item.score))}
+              </span>
             </li>`).join("")}
         </ul>
       `;
-        }
+    }
 
-        function renderCourses(courses) {
-            if (!courses || courses.length === 0)
-                return `<p class="text-gray-500">Καμία πρόταση μαθημάτων.</p>`;
+    function renderCourses(courses) {
+      if (!courses || courses.length === 0)
+        return `<p class="text-gray-500">Καμία πρόταση μαθημάτων.</p>`;
 
-            return courses.map(c => `
-        <div class="bg-white rounded-xl shadow mb-4 p-4 flex justify-between">
-          <span>${c.item}</span>
-          <span class="text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded">score: ${c.score}</span>
-          ${c.degree ? `<span class="text-sm text-gray-500 ml-2">(${c.degree})</span>` : ""}
+      return courses.map(c => `
+        <div class="bg-white rounded-xl shadow mb-4 p-4 flex flex-wrap gap-2 justify-between">
+          <span>${escapeHtml(c.item ?? "")}</span>
+          ${c.degree ? `<span class="text-sm text-gray-500">(${escapeHtml(String(c.degree))})</span>` : ""}
+          <span class="text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded">
+            score: ${escapeHtml(c.score == null ? "-" : String(c.score))}
+          </span>
         </div>
       `).join("");
-        }
-    </script>
+    }
 
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+  </script>
 </body>
-
 </html>

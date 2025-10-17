@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any
 from backend.database import get_db, init_db
 from backend.core import UniversityRecommender
+from pydantic import BaseModel
 from backend.core2 import CourseRecommender
+from backend.models import University, DegreeProgram, Course, Skill, CourseSkill
 
 app = FastAPI(title="Academic Recommender API", version="1.0")
 
@@ -31,3 +33,23 @@ def suggest_courses_for_university(univ_id: int, top_n: int = 10, db: Session = 
     recommender = CourseRecommender(db)
     result = recommender.suggest_courses(univ_id, top_n)
     return {"university_id": univ_id, "recommendations": result}
+
+class RecommendRequest(BaseModel):
+    university_id: int
+    top_n: int = 10
+
+@app.post("/recommendations")
+def post_recommendations(payload: RecommendRequest, db: Session = Depends(get_db)):
+    recommender = CourseRecommender(db)
+    result = recommender.suggest_courses(payload.university_id, payload.top_n)
+    return {"university_id": payload.university_id, "recommendations": result}
+
+@app.get("/debug/db-counts")
+def db_counts(db: Session = Depends(get_db)):
+    return {
+        "University": db.query(University).count(),
+        "DegreeProgram": db.query(DegreeProgram).count(),
+        "Course": db.query(Course).count(),
+        "Skill": db.query(Skill).count(),
+        "CourseSkill": db.query(CourseSkill).count(),
+    }
