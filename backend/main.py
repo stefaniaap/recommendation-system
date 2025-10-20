@@ -1,10 +1,6 @@
-# =============================================
-# main.py (ΤΕΛΙΚΑ ΔΙΟΡΘΩΜΕΝΟ)
-# =============================================
-
 from fastapi import FastAPI, Depends, HTTPException, Query, Path
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct
 from urllib.parse import unquote
@@ -12,23 +8,32 @@ from pydantic import BaseModel, Field
 
 # Εισαγωγές για τη Βάση Δεδομένων, μοντέλα και Recommenders
 from backend.database import get_db, init_db
-from backend.models import University, CourseSkill
-from backend.core import UniversityRecommender
-from backend.core2 import CourseRecommender
+from backend.models import University, CourseSkill 
+from backend.core import UniversityRecommender 
+from backend.core2 import CourseRecommender 
 
 # =======================================================
-# Pydantic Models για σωστή απόκριση
+# Pydantic Models για σωστή απόκριση (ΔΙΟΡΘΩΜΕΝΟ)
 # =======================================================
 
 class RecommendedCourse(BaseModel):
     course_name: str = Field(..., description="Όνομα του προτεινόμενου μαθήματος.")
     score: float = Field(..., description="Σκορ συνάφειας/σύστασης (0.0 έως 1.0).", ge=0.0, le=1.0)
+    # 💡 ΠΡΟΣΘΗΚΗ ΝΕΩΝ ΠΕΔΙΩΝ
+    description: str = Field("", description="Αναλυτική περιγραφή του μαθήματος.")
+    objectives: str = Field("", description="Στόχοι του μαθήματος.")
+    learning_outcomes: str = Field("", description="Μαθησιακά αποτελέσματα του μαθήματος.")
+    course_content: str = Field("", description="Περιεχόμενο του μαθήματος.")
+    # Προσθήκη skills για πληρότητα
+    new_skills: List[str] = Field([], description="Νέες δεξιότητες που εισάγει το μάθημα.")
+    compatible_skills: List[str] = Field([], description="Κοινές δεξιότητες με το πτυχίο.")
+
 
 class CourseRecommendationsResponse(BaseModel):
     university_id: int
     program_id: int = Field(..., description="Το Program ID (-1 για προτεινόμενα νέα πτυχία)")
     degree: str
-    recommendations: List[RecommendedCourse]
+    recommendations: List[RecommendedCourse] 
 
 
 app = FastAPI(title="Academic Recommender API", version="1.0")
@@ -58,7 +63,7 @@ def startup_event():
 @app.get("/recommend/courses/{university_id}", include_in_schema=False)
 def recommend_courses_for_degree(
     university_id: int,
-    program_id: int = Query(..., alias="program_id", description="Το ID του ακαδημαϊκού προγράμματος"),
+    program_id: int = Query(..., alias="program_id", description="Το ID του ακαδηδημαϊκού προγράμματος"),
     top_n_courses: int = 10,
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
@@ -104,9 +109,18 @@ def recommend_courses_for_degree(
             top_n=top_n_courses
         )
         
-        # ⚠️ ΔΙΟΡΘΩΣΗ ΛΟΓΙΚΗΣ: Φιλτράρουμε το 'info' dict.
+        # 💡 ΔΙΟΡΘΩΜΕΝΟ MAPPING: Πλέον περνάμε ΟΛΑ τα πεδία
         final_recommendations = [
-            {"course_name": item['course'], "score": item['score']}
+            {
+                "course_name": item['course'], 
+                "score": item['score'],
+                "description": item.get('description', ''),
+                "objectives": item.get('objectives', ''),
+                "learning_outcomes": item.get('learning_outcomes', ''),
+                "course_content": item.get('course_content', ''),
+                "new_skills": item.get('new_skills', []),
+                "compatible_skills": item.get('compatible_skills', []),
+            }
             for item in result 
             if isinstance(item, dict) and 'course' in item and 'score' in item
         ]
@@ -185,7 +199,6 @@ async def recommend_courses_by_name(
     )
 
     if not similar_degrees:
-        # Αν δεν βρεθούν παρόμοια πτυχία, επιστρέφουμε κενή λίστα συστάσεων
         return CourseRecommendationsResponse(
             university_id=university_id,
             program_id=-1,
@@ -199,9 +212,18 @@ async def recommend_courses_by_name(
         top_n=top_n_courses
     )
     
-    # ⚠️ ΔΙΟΡΘΩΣΗ ΛΟΓΙΚΗΣ: Φιλτράρουμε το 'info' dict.
+    # 💡 ΔΙΟΡΘΩΜΕΝΟ MAPPING: Πλέον περνάμε ΟΛΑ τα πεδία
     final_recommendations = [
-        {"course_name": item['course'], "score": item['score']}
+        {
+            "course_name": item['course'], 
+            "score": item['score'],
+            "description": item.get('description', ''),
+            "objectives": item.get('objectives', ''),
+            "learning_outcomes": item.get('learning_outcomes', ''),
+            "course_content": item.get('course_content', ''),
+            "new_skills": item.get('new_skills', []),
+            "compatible_skills": item.get('compatible_skills', []),
+        }
         for item in result 
         if isinstance(item, dict) and 'course' in item and 'score' in item
     ]
@@ -212,6 +234,7 @@ async def recommend_courses_by_name(
         degree=decoded_degree_name,
         recommendations=final_recommendations
     )
+
 
 # =======================================================
 # ΛΟΙΠΑ ENDPOINTS (Παραμένουν ως είχαν)

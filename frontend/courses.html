@@ -1,247 +1,203 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Προτεινόμενα Μαθήματα</title>
+    <title>Course Recommendations</title>
     <style>
-        /* =================================================================
-           ΓΕΝΙΚΕΣ ΜΕΤΑΒΛΗΤΕΣ & SIDEBAR ΧΡΩΜΑΤΑ (Ίδια με results.html)
-           ================================================================= */
-        :root {
-            --primary-color: #007bff;
-            --secondary-color: #6c757d;
-            --info-blue-color: #17a2b8;
-            --sidebar-color: #2c3e50;
-            --background-color: #f4f7f6;
-            --card-background: #ffffff;
-            --border-radius: 10px;
-            --shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            --heatmap-low-color: #e0f2f7;
-            --heatmap-high-color: #2196f3;
-        }
-
+        /* Βασικό CSS για τη σελίδα Courses */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--background-color);
+            padding: 20px;
+            background-color: #e9ecef;
             color: #333;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            min-height: 100vh;
         }
 
-        /* =================================================================
-           SIDEBAR STYLES (Ίδια με results.html)
-           ================================================================= */
-        .sidebar {
-            width: 240px;
-            background-color: var(--sidebar-color);
-            color: white;
-            padding: 20px 0;
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-        }
-
-        .logo {
-            font-size: 1.5em;
-            font-weight: 700;
-            text-align: center;
-            padding: 10px 20px 30px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 20px;
-            color: var(--info-blue-color);
-        }
-
-        .sidebar-nav ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .sidebar-nav li a {
-            display: block;
-            color: rgba(255, 255, 255, 0.85);
-            text-decoration: none;
-            padding: 12px 20px;
-            transition: background-color 0.2s, color 0.2s;
-            font-weight: 500;
-        }
-
-        .sidebar-nav li a:hover {
-            background-color: rgba(0, 0, 0, 0.2);
-            color: white;
-        }
-
-        .sidebar-nav li a.active {
-            background-color: var(--primary-color);
-            color: white;
-            font-weight: 700;
-            border-left: 5px solid yellow;
-            padding-left: 15px;
-        }
-
-        /* =================================================================
-           MAIN CONTENT STYLES
-           ================================================================= */
-        .main-content {
-            margin-left: 240px;
-            padding: 40px;
-            flex-grow: 1;
-            box-sizing: border-box;
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
         }
 
         .header-section {
-            background-color: var(--card-background);
-            padding: 25px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 20px;
         }
 
-        .header-section h1 {
-            color: var(--primary-color);
-            font-size: 1.8em;
-            margin-top: 0;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }
-
-        #degree-info {
-            color: var(--secondary-color);
+        #courses-header {
             font-size: 1.1em;
-            margin-bottom: 15px;
-        }
-
-        /* =================================================================
-           COURSE RECOMMENDATION STYLES
-           ================================================================= */
-        .recommendation-container {
-            margin-top: 30px;
+            color: #6c757d;
+            margin-bottom: 5px;
         }
 
         #courses-title {
-            font-size: 1.5em;
-            color: #333;
-            margin-bottom: 20px;
+            color: #007bff;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+            font-size: 1.8em;
             font-weight: 600;
         }
 
-        #course-recommendation-list {
-            list-style: none;
-            padding: 0;
+        /* Style για τις αναλυτικές πληροφορίες πτυχίου */
+        .info-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f8ff;
+            /* Πολύ ανοιχτό μπλε */
+            border-radius: 8px;
+            border: 1px solid #cce5ff;
+        }
+
+        .section-title {
+            color: #0056b3;
+            border-bottom: 1px solid #cce5ff;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+        }
+
+        .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
         }
 
-        .course-item-card {
-            background-color: var(--card-background);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
+        .info-item h6 {
+            color: #495057;
+            font-weight: 700;
+            margin-bottom: 5px;
+            border-left: 3px solid #007bff;
+            padding-left: 8px;
+            font-size: 0.9em;
+            /* Μικρότερο header */
+        }
+
+        .info-item p {
+            font-size: 0.9em;
+            color: #6c757d;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        /* Styles για τη λίστα μαθημάτων */
+        #course-recommendation-list {
+            padding: 0;
+            list-style: none;
+        }
+
+        .course-card {
+            list-style: none;
+            margin-bottom: 18px;
             padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 8px solid;
-            /* Θα χρωματιστεί από JS */
+            border-left: 6px solid;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
             transition: transform 0.2s;
         }
 
-        .course-item-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        .course-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
 
         .course-name {
-            font-weight: 600;
-            font-size: 1.1em;
             margin: 0;
-            flex-grow: 1;
+            font-size: 1.2em;
+            color: #343a40;
+            font-weight: 600;
         }
 
-        .course-score {
-            font-weight: 700;
+        .score-badge {
+            padding: 5px 12px;
             color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
+            border-radius: 20px;
+            font-weight: bold;
             font-size: 0.9em;
-            margin-left: 15px;
-            min-width: 70px;
+        }
+
+        /* Bootstrap-like Badges για skills */
+        .badge {
+            display: inline-block;
+            padding: .35em .65em;
+            font-size: .75em;
+            font-weight: 700;
+            line-height: 1;
+            color: #fff;
             text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: .25rem;
+            margin-right: 5px;
         }
 
-        /* =================================================================
-           LOADING SPINNER
-           ================================================================= */
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: var(--primary-color);
-            animation: spin 1s ease infinite;
-            margin: 20px auto;
-            display: none;
+        .bg-success {
+            background-color: #198754 !important;
         }
 
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
+        .bg-info {
+            background-color: #0dcaf0 !important;
+            color: #000 !important;
+        }
 
-            100% {
-                transform: rotate(360deg);
-            }
+        .mt-5 {
+            margin-top: 3rem !important;
+        }
+
+        .mt-3 {
+            margin-top: 1rem !important;
+        }
+
+        .mb-3 {
+            margin-bottom: 1rem !important;
+        }
+
+        .p-3 {
+            padding: 1rem !important;
+        }
+
+        #loading-spinner p {
+            color: #007bff;
+            font-size: 1.1em;
+            font-weight: 500;
         }
     </style>
 </head>
 
 <body>
-    <div class="sidebar">
-        <div class="logo">Edu<span style="color: yellow;">Recommender</span></div>
-        <nav class="sidebar-nav">
-            <ul>
-                <li><a href="index.html">🏠 Αρχική</a></li>
-                <li><a href="#" class="active">📚 Προτεινόμενα Μαθήματα</a></li>
-                <li><a href="results.html" id="back-to-results">📊 Πίσω στα Αποτελέσματα</a></li>
-            </ul>
-        </nav>
-    </div>
+    <div class="container">
+        <a href="javascript:history.back()"
+            style="display: block; margin-bottom: 20px; color: #007bff; text-decoration: none;">&larr; Επιστροφή στις
+            Προτάσεις Πτυχίων</a>
 
-    <div class="main-content">
         <div class="header-section">
-            <h1>Σύσταση Μαθημάτων (Course Recommendation)</h1>
-            <p id="degree-info">Φόρτωση πληροφοριών πτυχίου...</p>
+            <p id="courses-header">Φόρτωση Πανεπιστημίου...</p>
         </div>
 
-        <div class="recommendation-container">
-            <h2 id="courses-title"></h2>
+        <h2 id="courses-title">Φόρτωση Προτάσεων Μαθημάτων...</h2>
 
-            <div id="loading-spinner" class="spinner"></div>
-
-            <ul id="course-recommendation-list">
-            </ul>
+        <div id="loading-spinner" style="text-align: center; margin: 50px 0;">
+            <p>Φόρτωση δεδομένων...</p>
         </div>
+
+        <ul id="course-recommendation-list" style="padding: 0;">
+        </ul>
     </div>
 
     <script src="courses_script.js"></script>
-    <script>
-        // Ενημέρωση του back link με το σωστό univ_id
-        document.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            const univId = params.get('univ_id');
-            const backLink = document.getElementById('back-to-results');
-            if (univId) {
-                backLink.href = `results.html?univ_id=${univId}`;
-            }
-        });
-    </script>
 </body>
 
 </html>

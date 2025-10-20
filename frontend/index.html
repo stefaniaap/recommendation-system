@@ -30,15 +30,13 @@
             background-color: var(--background-color);
             margin: 0;
             padding: 0;
-            /* Αφαιρούμε το padding από το body */
             display: flex;
-            /* Χρησιμοποιούμε Flexbox για Sidebar & Content */
             min-height: 100vh;
             box-sizing: border-box;
         }
 
         /* =================================================================
-           SIDEBAR STYLES (ΝΕΟ)
+           SIDEBAR STYLES (ΣΤΑΘΕΡΑ)
            ================================================================= */
         .sidebar {
             width: 240px;
@@ -46,7 +44,6 @@
             color: white;
             padding: 20px 0;
             position: fixed;
-            /* Μόνιμη Θέση */
             top: 0;
             left: 0;
             height: 100%;
@@ -62,7 +59,6 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             margin-bottom: 20px;
             color: var(--info-blue-color);
-            /* Έμφαση στο λογότυπο */
         }
 
         .sidebar-nav ul {
@@ -90,7 +86,6 @@
             color: white;
             font-weight: 700;
             border-left: 5px solid yellow;
-            /* Έμφαση ενεργής σελίδας */
             padding-left: 15px;
         }
 
@@ -99,25 +94,20 @@
            ================================================================= */
         .main-content {
             margin-left: 240px;
-            /* Ωθεί το περιεχόμενο δεξιά του sidebar */
             flex-grow: 1;
             padding: 20px;
-            /* Προσθέτουμε padding στο κύριο περιεχόμενο */
             display: flex;
             justify-content: center;
-            /* Κεντράρισμα του container μέσα στο main-content */
             align-items: center;
-            /* Επαναφέρουμε το align-items: center που υπήρχε στο body */
         }
 
         .container {
             width: 100%;
             max-width: 900px;
             text-align: center;
-            /* Αφαιρούμε το margin: 0 auto; καθώς το κεντράρισμα γίνεται από το main-content */
         }
 
-        /* Τίτλος (παραμένει) */
+        /* Τίτλος */
         .header {
             margin-bottom: 40px;
         }
@@ -128,7 +118,7 @@
             font-weight: 700;
         }
 
-        /* Dropdown Πανεπιστημίου (παραμένει) */
+        /* Dropdown Πανεπιστημίου */
         .selection-area {
             background: var(--card-background);
             padding: 30px;
@@ -159,7 +149,7 @@
             cursor: pointer;
         }
 
-        /* Κουτιά Μετρήσεων (παραμένουν) */
+        /* Κουτιά Μετρήσεων */
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -192,7 +182,7 @@
             margin: 0;
         }
 
-        /* Κουμπιά Πλοήγησης (παραμένουν) */
+        /* Κουμπιά Πλοήγησης */
         .action-buttons {
             display: flex;
             justify-content: center;
@@ -244,15 +234,12 @@
 
 <body>
     <div class="sidebar">
-        <div class="logo">
-            <span style="color: var(--primary-color);">Academic</span> Hub 🎓
-        </div>
+        <div class="logo">Edu<span style="color: yellow;">Recommender</span></div>
         <nav class="sidebar-nav">
             <ul>
-                <li><a href="index.html" class="active">🏠 Φοιτητές (Αρχική)</a></li>
-                <li><a href="#">🏛️ Πανεπιστήμια</a></li>
-                <li><a href="#">📊 Αναλύσεις</a></li>
-                <li><a href="#">⚙️ Ρυθμίσεις</a></li>
+                <li><a href="index.html" id="nav-home">🏠 Αρχική</a></li>
+                <li><a href="results.html" id="nav-results">📊 Αποτελέσματα/Προτάσεις</a></li>
+                <li><a href="courses.html" id="nav-courses">📚 Προτεινόμενα Μαθήματα</a></li>
             </ul>
         </nav>
     </div>
@@ -299,6 +286,12 @@
 
 
     <script src="script.js"></script>
+    <script>
+        // Ρύθμιση active class για την τρέχουσα σελίδα
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('nav-home').classList.add('active');
+        });
+    </script>
 </body>
 
 </html>
