@@ -4,124 +4,301 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkillCrawl Recommendations</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Academic Insight Hub</title>
+    <style>
+        /* =================================================================
+           ΓΕΝΙΚΕΣ ΜΕΤΑΒΛΗΤΕΣ & SIDEBAR ΧΡΩΜΑΤΑ
+           ================================================================= */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --sidebar-color: #2c3e50;
+            /* Σκούρο Navy Blue */
+            --info-blue-color: #17a2b8;
+            /* Χρώμα για το Logo */
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --border-radius: 8px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* =================================================================
+           ΚΥΡΙΑ ΔΟΜΗ (FLEXBOX)
+           ================================================================= */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            /* Αφαιρούμε το padding από το body */
+            display: flex;
+            /* Χρησιμοποιούμε Flexbox για Sidebar & Content */
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* =================================================================
+           SIDEBAR STYLES (ΝΕΟ)
+           ================================================================= */
+        .sidebar {
+            width: 240px;
+            background-color: var(--sidebar-color);
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            /* Μόνιμη Θέση */
+            top: 0;
+            left: 0;
+            height: 100%;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .logo {
+            font-size: 1.5em;
+            font-weight: 700;
+            text-align: center;
+            padding: 10px 20px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+            color: var(--info-blue-color);
+            /* Έμφαση στο λογότυπο */
+        }
+
+        .sidebar-nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-nav li a {
+            display: block;
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            padding: 12px 20px;
+            transition: background-color 0.2s, color 0.2s;
+            font-weight: 500;
+        }
+
+        .sidebar-nav li a:hover {
+            background-color: rgba(0, 0, 0, 0.2);
+            color: white;
+        }
+
+        .sidebar-nav li a.active {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 700;
+            border-left: 5px solid yellow;
+            /* Έμφαση ενεργής σελίδας */
+            padding-left: 15px;
+        }
+
+        /* =================================================================
+           MAIN CONTENT STYLES
+           ================================================================= */
+        .main-content {
+            margin-left: 240px;
+            /* Ωθεί το περιεχόμενο δεξιά του sidebar */
+            flex-grow: 1;
+            padding: 20px;
+            /* Προσθέτουμε padding στο κύριο περιεχόμενο */
+            display: flex;
+            justify-content: center;
+            /* Κεντράρισμα του container μέσα στο main-content */
+            align-items: center;
+            /* Επαναφέρουμε το align-items: center που υπήρχε στο body */
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+            /* Αφαιρούμε το margin: 0 auto; καθώς το κεντράρισμα γίνεται από το main-content */
+        }
+
+        /* Τίτλος (παραμένει) */
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #343a40;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+
+        /* Dropdown Πανεπιστημίου (παραμένει) */
+        .selection-area {
+            background: var(--card-background);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 40px;
+        }
+
+        .selection-area label {
+            display: block;
+            font-size: 1.1em;
+            color: #495057;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        #university-select {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1em;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        /* Κουτιά Μετρήσεων (παραμένουν) */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card {
+            background: var(--card-background);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            border-left: 5px solid var(--primary-color);
+            transition: transform 0.3s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-card h3 {
+            font-size: 2.2em;
+            color: var(--primary-color);
+            margin: 0 0 5px 0;
+        }
+
+        .metric-card p {
+            font-size: 0.9em;
+            color: var(--secondary-color);
+            margin: 0;
+        }
+
+        /* Κουμπιά Πλοήγησης (παραμένουν) */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .action-button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            width: 50%;
+            max-width: 300px;
+        }
+
+        .action-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .action-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        #degrees-btn {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        #degrees-btn:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+
+        #courses-btn {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        #courses-btn:hover:not(:disabled) {
+            background-color: #5a6268;
+        }
+    </style>
 </head>
 
-<body class="bg-gray-100 font-sans min-h-screen">
 
-    <div class="max-w-4xl mx-auto py-10 px-6">
-        <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">
-            🎓 SkillCrawl Recommendation System
-        </h1>
-
-        <!-- Πανεπιστήμιο επιλογή -->
-        <div class="bg-white shadow p-6 rounded-2xl mb-6">
-            <label for="univId" class="block text-lg font-medium mb-2">
-                Πανεπιστήμιο (ID):
-            </label>
-            <input id="univId" type="number"
-                class="border border-gray-300 p-3 rounded-lg w-full mb-4 focus:ring focus:ring-blue-200"
-                placeholder="π.χ. 3" />
-
-            <button id="fetchBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-                🔍 Δημιουργία Προτάσεων
-            </button>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <span style="color: var(--primary-color);">Academic</span> Hub 🎓
         </div>
-
-        <!-- Loading -->
-        <div id="loading" class="text-center text-gray-600 hidden">⏳ Φόρτωση...</div>
-
-        <!-- Αποτελέσματα -->
-        <div id="results" class="space-y-10"></div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="index.html" class="active">🏠 Φοιτητές (Αρχική)</a></li>
+                <li><a href="#">🏛️ Πανεπιστήμια</a></li>
+                <li><a href="#">📊 Αναλύσεις</a></li>
+                <li><a href="#">⚙️ Ρυθμίσεις</a></li>
+            </ul>
+        </nav>
     </div>
 
-    <script>
-        const API_URL = "http://127.0.0.1:8000"; // Αν χρειάζεται, άλλαξε το
+    <div class="main-content">
+        <div class="container">
+            <div class="header">
+                <h1>🎓 Academic Insight Hub </h1>
+                <p>Συστήματα Προτάσεων Ακαδημαϊκών Προγραμμάτων & Δεξιοτήτων</p>
+            </div>
 
-        const fetchBtn = document.getElementById("fetchBtn");
-        const univInput = document.getElementById("univId");
-        const loading = document.getElementById("loading");
-        const resultsDiv = document.getElementById("results");
 
-        fetchBtn.addEventListener("click", async () => {
-            const univId = univInput.value.trim();
-            if (!univId) {
-                alert("Παρακαλώ εισάγετε ένα University ID!");
-                return;
-            }
+            <div class="selection-area">
+                <label for="university-select">Επιλέξτε Πανεπιστήμιο για Ανάλυση:</label>
+                <select id="university-select" disabled>
+                    <option value="" disabled selected>Φόρτωση Πανεπιστημίων...</option>
+                </select>
+            </div>
 
-            resultsDiv.innerHTML = "";
-            loading.classList.remove("hidden");
 
-            try {
-                const res = await fetch(`${API_URL}/recommendations`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ university_id: parseInt(univId), top_k: 5 })
-                });
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3 id="total-programs">0</h3>
+                    <p>Συνολικά Προγράμματα Σπουδών</p>
+                </div>
+                <div class="metric-card">
+                    <h3 id="recognized-skills">0</h3>
+                    <p>Αναγνωρισμένες Δεξιότητες (ESCO)</p>
+                </div>
+            </div>
 
-                const data = await res.json();
-                console.log("Backend response:", data); // για έλεγχο
-                renderResults(data);
 
-            } catch (err) {
-                console.error(err);
-                resultsDiv.innerHTML = `<p class="text-red-600">Σφάλμα φόρτωσης δεδομένων.</p>`;
-            } finally {
-                loading.classList.add("hidden");
-            }
-        });
+            <div class="action-buttons">
+                <button id="degrees-btn" class="action-button" onclick="navigate('degrees')" disabled>
+                    ΠΡΟΤΕΙΝΕ ΠΤΥΧΙΑ (DEGREES)
+                </button>
+                <button id="courses-btn" class="action-button" onclick="navigate('courses')" disabled>
+                    ΠΡΟΤΕΙΝΕ ΜΑΘΗΜΑΤΑ (COURSES)
+                </button>
+            </div>
 
-        function renderResults(data) {
-            if (!data) return;
-
-            resultsDiv.innerHTML = `
-        <section>
-          <h2 class="text-2xl font-semibold mb-4 text-blue-800">📘 Προτεινόμενα Πτυχία</h2>
-          ${renderList(data.missing_degrees, "item")}
-        </section>
-
-        <section>
-          <h2 class="text-2xl font-semibold mb-4 text-green-700">💡 Προτεινόμενες Δεξιότητες</h2>
-          ${renderList(data.missing_skills, "item")}
-        </section>
-
-        <section>
-          <h2 class="text-2xl font-semibold mb-4 text-orange-600">📗 Προτεινόμενα Μαθήματα</h2>
-          ${renderCourses(data.missing_courses)}
-        </section>
-      `;
-        }
-
-        function renderList(list, key) {
-            if (!list || list.length === 0)
-                return `<p class="text-gray-500">Καμία πρόταση.</p>`;
-            return `
-        <ul class="divide-y divide-gray-200 bg-white rounded-xl shadow">
-          ${list.map(item => `
-            <li class="p-4 flex justify-between items-center">
-              <span>${item[key]}</span>
-              <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">score: ${item.score}</span>
-            </li>`).join("")}
-        </ul>
-      `;
-        }
-
-        function renderCourses(courses) {
-            if (!courses || courses.length === 0)
-                return `<p class="text-gray-500">Καμία πρόταση μαθημάτων.</p>`;
-
-            return courses.map(c => `
-        <div class="bg-white rounded-xl shadow mb-4 p-4 flex justify-between">
-          <span>${c.item}</span>
-          <span class="text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded">score: ${c.score}</span>
-          ${c.degree ? `<span class="text-sm text-gray-500 ml-2">(${c.degree})</span>` : ""}
         </div>
-      `).join("");
-        }
-    </script>
+    </div>
 
+
+    <script src="script.js"></script>
 </body>
 
 </html>
