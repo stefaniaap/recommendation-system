@@ -19,7 +19,7 @@ function scoreToCourseColor(score) {
 
 
 // =======================================================
-// 2. Συνάρτηση Εμφάνισης Μαθημάτων (ΜΕ ΟΜΑΔΟΠΟΙΗΣΗ) 💡
+// 2. Συνάρτηση Εμφάνισης Μαθημάτων
 // =======================================================
 
 function displayCourseRecommendations(courses, degreeName) {
@@ -27,8 +27,13 @@ function displayCourseRecommendations(courses, degreeName) {
     const titleElement = document.getElementById('courses-title');
     const loadingSpinner = document.getElementById('loading-spinner');
 
-    loadingSpinner.style.display = 'none';
-    titleElement.textContent = `📚 Προτεινόμενα Μαθήματα για το: ${decodeURIComponent(degreeName)}`;
+    if (loadingSpinner) loadingSpinner.style.display = 'none';
+    if (titleElement) titleElement.textContent = `📚 Προτεινόμενα Μαθήματα για το: ${decodeURIComponent(degreeName)}`;
+
+    if (!resultsContainer) {
+        console.error("Κρίσιμο Σφάλμα: Missing #course-recommendation-list.");
+        return;
+    }
 
     if (!courses || !Array.isArray(courses) || courses.length === 0) {
         resultsContainer.innerHTML = `<li class="course-card" style="border-left-color: #dc3545;">
@@ -37,12 +42,11 @@ function displayCourseRecommendations(courses, degreeName) {
         return;
     }
 
-    // 1. ΟΜΑΔΟΠΟΙΗΣΗ: Χρησιμοποιούμε την πρώτη "ΝΕΑ" δεξιότητα ως κλειδί
+    // ΟΜΑΔΟΠΟΙΗΣΗ
     const groupedBySkill = courses.reduce((acc, course) => {
-        // Επιλογή της πιο σημαντικής δεξιότητας (πρώτη νέα δεξιότητα)
         const groupKey = course.new_skills && course.new_skills.length > 0
             ? `Νέος Τομέας: ${course.new_skills[0]}`
-            : 'Γενικές Συστάσεις (Ενίσχυση)'; // Fallback
+            : 'Γενικές Συστάσεις (Ενίσχυση)';
 
         if (!acc[groupKey]) {
             acc[groupKey] = [];
@@ -52,27 +56,24 @@ function displayCourseRecommendations(courses, degreeName) {
     }, {});
 
 
-    // 2. ΔΗΜΙΟΥΡΓΙΑ HTML ανά ΟΜΑΔΑ
+    // ΔΗΜΙΟΥΡΓΙΑ HTML
     let htmlContent = '';
 
     for (const groupKey in groupedBySkill) {
         const groupCourses = groupedBySkill[groupKey];
 
-        // Τίτλος Ομάδας
         htmlContent += `<h3 class="section-title mt-5" style="color: #007bff;">${groupKey} (${groupCourses.length} Μαθήματα)</h3>`;
 
-        // Λίστα Μαθημάτων
         groupCourses.forEach(course => {
             const score = course.score ? course.score.toFixed(3) : 'N/A';
             const color = scoreToCourseColor(course.score || 0);
 
-            // 🚨 ΝΕΑ ΠΕΔΙΑ ΠΕΡΙΓΡΑΦΗΣ (με fallback)
+            // Ασφαλής ανάκτηση πεδίων (για να αποφεύγονται τα 'null')
             const description = course.description || 'Δεν βρέθηκε.';
             const objectives = course.objectives || 'Δεν βρέθηκαν.';
             const learning_outcomes = course.learning_outcomes || 'Δεν βρέθηκαν.';
             const course_content = course.course_content || 'Δεν βρέθηκε.';
 
-            // Μετατροπή των skills σε badges
             const newSkills = (course.new_skills || []).map(s => `<span class="badge bg-success me-1">${s}</span>`).join(' ');
             const compatibleSkills = (course.compatible_skills || []).map(s => `<span class="badge bg-info me-1">${s}</span>`).join(' ');
 
@@ -121,26 +122,38 @@ function displayCourseRecommendations(courses, degreeName) {
 
 
 // =======================================================
-// 3. Κύρια Συνάρτηση Φόρτωσης
+// 3. Κύριες Συνάρτησεις Φόρτωσης (ΜΕ ΔΙΑΓΝΩΣΤΙΚΟΥΣ ΕΛΕΓΧΟΥΣ)
 // =======================================================
 
-async function loadCourseRecommendations() {
+async function fetchAndDisplayRecommendations() {
+    // 1. Ασφαλής ανάκτηση DOM στοιχείων (Debug check)
+    const headerElement = document.getElementById('courses-header');
+    const titleElement = document.getElementById('courses-title');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const listElement = document.getElementById('course-recommendation-list');
+
+    // **ΔΙΑΓΝΩΣΤΙΚΟΣ ΚΩΔΙΚΑΣ (DEBUGGING)**
+    // Ο έλεγχος για null αποτρέπει το σφάλμα "Cannot set properties of null"
+    if (headerElement === null || titleElement === null || loadingSpinner === null || listElement === null) {
+        console.error("ΔΙΑΓΝΩΣΗ ΣΦΑΛΜΑΤΟΣ: Ένα ή περισσότερα DOM στοιχεία είναι null. Βεβαιωθείτε ότι το HTML σας περιέχει τα ID: 'courses-header', 'courses-title', 'loading-spinner', 'course-recommendation-list'.");
+        return;
+    }
+
+    // 2. Λήψη παραμέτρων URL
     const params = new URLSearchParams(window.location.search);
     const univId = params.get('univ_id');
-    const degreeName = params.get('degree_name');
-
-    const headerElement = document.getElementById('courses-header');
-    const loadingSpinner = document.getElementById('loading-spinner');
+    const degreeName = params.get('degree_name'); // Αυτό έρχεται κωδικοποιημένο από το results_script.js
 
     if (!univId || !degreeName) {
-        headerElement.textContent = "Σφάλμα: Δεδομένα URL ελλιπή.";
+        headerElement.textContent = `Σφάλμα: Δεδομένα URL ελλιπή.`;
+        titleElement.textContent = "";
         loadingSpinner.style.display = 'none';
         return;
     }
 
     const decodedDegreeName = decodeURIComponent(degreeName);
 
-    // 1. Φόρτωση ονόματος πανεπιστημίου
+    // 3. Φόρτωση ονόματος πανεπιστημίου
     let univName = `Πανεπιστήμιο ID: ${univId}`;
     try {
         const univsResponse = await fetch(`${API_BASE_URL}/universities`);
@@ -155,12 +168,15 @@ async function loadCourseRecommendations() {
         console.warn("Could not fetch university name:", error);
     }
 
+    // Ενημέρωση των header/title
     headerElement.textContent = `Πανεπιστήμιο: ${univName}`;
-    document.getElementById('courses-title').textContent = `Φόρτωση Μαθημάτων για ${decodedDegreeName}...`;
+    titleElement.textContent = `Φόρτωση Μαθημάτων για ${decodedDegreeName}...`;
     loadingSpinner.style.display = 'block';
 
-    // 2. Κλήση API
+    // 4. Κλήση API (Χρησιμοποιεί το κωδικοποιημένο degreeName)
     const endpoint = `${API_BASE_URL}/recommend/courses/${univId}/${degreeName}`;
+
+    console.log("Calling API URL:", endpoint);
 
     try {
         const response = await fetch(endpoint);
@@ -180,16 +196,16 @@ async function loadCourseRecommendations() {
         data = await response.json();
         const recommendations = data.recommendations || [];
 
-        // 🚨 ΚΑΛΟΥΜΕ τη διορθωμένη συνάρτηση εμφάνισης με ομαδοποίηση
         displayCourseRecommendations(recommendations, degreeName);
 
     } catch (error) {
         console.error("Σφάλμα φόρτωσης προτεινόμενων μαθημάτων:", error);
+
         loadingSpinner.style.display = 'none';
-        document.getElementById('course-recommendation-list').innerHTML =
-            `<li class="course-card" style="border-left-color: #dc3545;">Αποτυχία φόρτωσης δεδομένων: ${error.message}. Ελέγξτε αν ο FastAPI server τρέχει.</li>`;
+
+        listElement.innerHTML = `<li class="course-card" style="border-left-color: #dc3545;">Αποτυχία φόρτωσης δεδομένων: ${error.message}. Ελέγξτε αν ο FastAPI server τρέχει.</li>`;
     }
 }
 
-// Εκκίνηση της διαδικασίας με τη φόρτωση της σελίδας
-document.addEventListener('DOMContentLoaded', loadCourseRecommendations);
+// Εκκίνηση της διαδικασίας
+fetchAndDisplayRecommendations();

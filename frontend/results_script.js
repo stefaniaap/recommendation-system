@@ -44,24 +44,31 @@ function generateSkillsHeatmap(topSkills) {
 
 
 // =======================================================
-// 2. ΝΕΑ Συναρτήση: Χειρισμός Κλικ για ΝΕΑ ΣΕΛΙΔΑ
+// 2. ΔΙΟΡΘΩΣΗ: Χειρισμός Κλικ για ΝΕΑ ΣΕΛΙΔΑ (με URL encoding)
 // =======================================================
 
 function handleRecommendCoursesClick(event) {
-    const button = event.target;
+    const button = event.target.closest('.recommend-courses-btn');
+    if (!button) return;
+
     const universityId = button.getAttribute('data-univ-id');
     const degreeName = button.getAttribute('data-degree-name');
 
-    // Κωδικοποιούμε το όνομα του πτυχίου για να είναι ασφαλές στο URL
+    if (!universityId || !degreeName) {
+        console.error("Missing data-univ-id or data-degree-name attribute on button.");
+        return;
+    }
+
+    // ⭐ ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Κωδικοποιούμε το όνομα του πτυχίου για να είναι ασφαλές στο URL
     const encodedDegreeName = encodeURIComponent(degreeName);
 
-    // Ανακατεύθυνση σε νέα σελίδα
+    // Ανακατεύθυνση σε courses.html με τις κωδικοποιημένες παραμέτρους
     window.location.href = `courses.html?univ_id=${universityId}&degree_name=${encodedDegreeName}`;
 }
 
 
 // =======================================================
-// 3. displayRecommendations (ΑΦΑΙΡΟΥΜΕ τα περιττά πεδία)
+// 3. displayRecommendations 
 // =======================================================
 
 /**
@@ -69,16 +76,21 @@ function handleRecommendCoursesClick(event) {
  * @param {Array<Object>} recommendations - Η λίστα των προτάσεων.
  * @param {string} type - Ο τύπος της πρότασης ('degrees' ή 'courses').
  * @param {string} univId - Το ID του πανεπιστημίου.
- * @param {Object} [profilesMap={}] - Χάρτης των πλήρων προφίλ για τα νέα πεδία.
  */
-function displayRecommendations(recommendations, type, univId, profilesMap = {}) {
+function displayRecommendations(recommendations, type, univId) {
     const resultsContainer = document.getElementById('recommendation-list');
     const titleElement = document.getElementById('results-title');
     const loadingSpinner = document.getElementById('loading-spinner');
 
-    loadingSpinner.style.display = 'none';
+    if (loadingSpinner) loadingSpinner.style.display = 'none';
 
-    // Ενημέρωση τίτλου για τον τύπο courses
+    // 1. Έλεγχος για κρίσιμα DOM στοιχεία
+    if (!resultsContainer || !titleElement || !loadingSpinner) {
+        console.error("Missing critical DOM elements in results.html");
+        return;
+    }
+
+    // 2. Ενημέρωση τίτλου
     let typeTitle = '';
     if (type === 'degrees') {
         typeTitle = 'Πτυχίων/Προγραμμάτων (βάσει Skills)';
@@ -88,9 +100,11 @@ function displayRecommendations(recommendations, type, univId, profilesMap = {})
 
     if (!recommendations || !Array.isArray(recommendations) || recommendations.length === 0 || (recommendations.length === 1 && recommendations[0].info)) {
         resultsContainer.innerHTML = `<li style="color: #dc3545; padding: 20px; background: #fff;">❌ Δεν βρέθηκαν νέες προτάσεις ${typeTitle} για αυτό το Πανεπιστήμιο.</li>`;
+        titleElement.textContent = `📊 Αποτελέσματα: Δεν βρέθηκαν (${typeTitle})`;
         return;
     }
 
+    // 3. Δημιουργία HTML περιεχομένου
     const htmlContent = recommendations.map((rec, index) => {
         const itemName = rec.degree || rec.degree_title || rec.course_name || 'Άγνωστο Πρόγραμμα';
 
@@ -99,15 +113,15 @@ function displayRecommendations(recommendations, type, univId, profilesMap = {})
         let skillsHtml = '';
         let coursesList = '';
 
-        // ❌ ΑΦΑΙΡΕΣΗ: ΔΕΝ ΧΡΕΙΑΖΟΝΤΑΙ ΠΛΕΟΝ ΤΑ ΠΛΗΡΗ ΠΕΔΙΑ ΕΔΩ
-        // (Ο χάρτης profilesMap πλέον δεν χρησιμοποιείται σε αυτό το display)
-
         if (type === 'degrees') {
             // Λογική για suggest_degrees_with_skills
             score = rec.score ? rec.score.toFixed(3) : 'N/A';
             degreeType = rec.degree_type || 'BSc/BA';
             itemColor = scoreToColor(rec.score || 0);
             skillsHtml = generateSkillsHeatmap(rec.top_skills);
+
+            // Το data-degree-name πρέπει να είναι un-encoded εδώ
+            rec.data_degree_name = rec.degree;
 
         } else if (type === 'courses') {
             // Λογική για suggest_new_degree_proposals 
@@ -116,6 +130,9 @@ function displayRecommendations(recommendations, type, univId, profilesMap = {})
             score = 'N/A';
             itemColor = '#28a745';
             showButton = true;
+
+            // Το data-degree-name πρέπει να είναι un-encoded εδώ
+            rec.data_degree_name = rec.degree_title;
 
             coursesList = topCourses.map(c =>
                 `<span class="course-tag">${c.course} (${c.freq})</span>`
@@ -141,7 +158,7 @@ function displayRecommendations(recommendations, type, univId, profilesMap = {})
 
                     <div class="action-section-centered">
                         <button class="recommend-courses-btn" 
-                                data-degree-name="${itemName}"
+                                data-degree-name="${rec.data_degree_name}"
                                 data-univ-id="${univId}">
                             Suggest Courses (Νέα Σελίδα)
                         </button>
@@ -172,7 +189,7 @@ function displayRecommendations(recommendations, type, univId, profilesMap = {})
     titleElement.textContent = `📊 Προτεινόμενα ${typeTitle} (${recommendations.length})`;
     resultsContainer.innerHTML = htmlContent;
 
-    // ΠΡΟΣΘΗΚΗ EVENT LISTENERS ΓΙΑ ΤΟ ΝΕΟ ΚΛΙΚ
+    // 4. ΠΡΟΣΘΗΚΗ EVENT LISTENERS ΓΙΑ ΤΟ ΝΕΟ ΚΛΙΚ
     document.querySelectorAll('.recommend-courses-btn').forEach(button => {
         button.addEventListener('click', handleRecommendCoursesClick);
     });
@@ -180,7 +197,7 @@ function displayRecommendations(recommendations, type, univId, profilesMap = {})
 
 
 // =======================================================
-// 4. Κύρια Συνάρτηση: loadRecommendations (Απλοποίηση)
+// 4. Κύρια Συνάρτηση: loadRecommendations
 // =======================================================
 
 async function loadRecommendations() {
@@ -191,9 +208,16 @@ async function loadRecommendations() {
     const infoElement = document.getElementById('university-info');
     const titleElement = document.getElementById('results-title');
     const loadingSpinner = document.getElementById('loading-spinner');
+    const resultsContainer = document.getElementById('recommendation-list');
+
+    // Έλεγχος για κρίσιμα DOM στοιχεία
+    if (!infoElement || !titleElement || !loadingSpinner || !resultsContainer) {
+        console.error("Missing critical DOM elements in results.html during load.");
+        return;
+    }
 
     if (!univId || !type) {
-        infoElement.textContent = "Σφάλμα: Δεν βρέθηκε αναγνωριστικό Πανεπιστημίου (univ_id) στο URL.";
+        infoElement.textContent = "Σφάλμα: Δεν βρέθηκε αναγνωριστικό Πανεπιστημίου ή τύπος αναζήτησης στο URL.";
         loadingSpinner.style.display = 'none';
         return;
     }
@@ -221,10 +245,8 @@ async function loadRecommendations() {
     let apiUrl = '';
 
     if (type === 'degrees') {
-        // http://127.0.0.1:8000/recommend/degrees/1
         apiUrl = `${API_BASE_URL}/recommend/degrees/${univId}`;
     } else if (type === 'courses') {
-        // http://127.0.0.1:8000/recommendations/university/1 (Αυτό το endpoint επιστρέφει new_degree_proposals)
         apiUrl = `${API_BASE_URL}/recommendations/university/${univId}`;
     } else {
         infoElement.textContent = "Σφάλμα: Άγνωστος τύπος αναζήτησης.";
@@ -232,35 +254,35 @@ async function loadRecommendations() {
         return;
     }
 
-    // ❌ ΑΦΑΙΡΕΣΗ ΤΗΣ ΔΕΥΤΕΡΗΣ ΚΛΗΣΗΣ /profiles/{univId}
-    // Αφού τα πεδία δεν εμφανίζονται, δεν χρειάζεται να τα ζητήσουμε.
-
     try {
         const response = await fetch(apiUrl);
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            let errorDetail = await response.text();
+            try {
+                const errorJson = JSON.parse(errorDetail);
+                errorDetail = errorJson.detail || errorDetail;
+            } catch (e) {
+                // ignore
+            }
+            throw new Error(`HTTP error! Status: ${response.status}. Detail: ${errorDetail}`);
         }
         const data = await response.json();
 
         // 3. Εμφάνιση αποτελεσμάτων
         let recommendationsToShow;
         if (type === 'degrees') {
-            // Το endpoint /recommend/degrees/{id} επιστρέφει ένα αντικείμενο με 'recommended_degrees'
             recommendationsToShow = data.recommended_degrees || [];
         } else if (type === 'courses') {
-            // Το endpoint /recommendations/university/{id} επιστρέφει ένα αντικείμενο με 'recommendations'
             recommendationsToShow = data.recommendations.new_degree_proposals || [];
         }
 
-        // 4. Εμφανίζουμε μόνο τις βασικές προτάσεις.
-        // Το profilesMap δεν χρειάζεται πλέον.
         displayRecommendations(recommendationsToShow, type, univId);
 
     } catch (error) {
         console.error("Fetch error:", error);
-        document.getElementById('recommendation-list').innerHTML =
+        resultsContainer.innerHTML =
             `<li style="color: #dc3545; padding: 20px; background: #fff;">
-                 ⚠️ Αδυναμία φόρτωσης δεδομένων. Βεβαιωθείτε ότι ο FastAPI server είναι σε λειτουργία.
+                 ⚠️ Αδυναμία φόρτωσης δεδομένων. Βεβαιωθείτε ότι ο FastAPI server είναι σε λειτουργία. (Λεπτομέρειες: ${error.message})
              </li>`;
         titleElement.textContent = "Σφάλμα Φόρτωσης Αποτελεσμάτων";
         loadingSpinner.style.display = 'none';
