@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Optional
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
-# ⚠️ ΣΗΜΑΝΤΙΚΟ: Εισαγωγή του Course model
+# Υποθέτουμε ότι αυτά τα models είναι σωστά ορισμένα
 from backend.models import University, Course 
 import json
 import re
@@ -15,7 +15,7 @@ class CourseRecommender:
         self.db = db
 
     # ==========================================================
-    # 🔹 Βοηθητικές μέθοδοι
+    # 🔹 Βοηθητικές μέθοδοι (Helper Methods)
     # ==========================================================
     def get_university(self, univ_id: int) -> Optional[University]:
         """Επιστρέφει αντικείμενο University από τη βάση."""
@@ -30,7 +30,7 @@ class CourseRecommender:
         """Αφαιρεί κενά, σημεία στίξης, και μετατρέπει σε κεφαλαία για ασφαλή σύγκριση."""
         if not name:
             return ""
-        # Περιλαμβάνουμε Ελληνικούς χαρακτήρες (u0370-u1FFF)
+        # Περιλαμβάνουμε Ελληνικούς χαρακτήρες
         cleaned_name = re.sub(r'[^a-zA-Z0-9\s\u0370-\u03FF\u1F00-\u1FFF]', '', name)
         return cleaned_name.strip().upper()
 
@@ -53,40 +53,36 @@ class CourseRecommender:
                 titles = [str(raw_titles)]
         except Exception:
             titles = []
-        # Επιτρέπουμε και ελληνικούς χαρακτήρες
+        # Καθαρισμός, επιτρέποντας Ελληνικούς χαρακτήρες
         return [
             re.sub(r"[^a-zA-Z0-9 \-&\u0370-\u03FF\u1F00-\u1FFF]", "", str(t)).strip()
             for t in titles if t
         ]
 
-    # ==========================================================
-    # 💡 ΝΕΑ Βοηθητική Μέθοδος: Ανάκτηση Πληροφοριών Μαθήματος
-    # ==========================================================
     def get_course_details_by_name(self, course_name: str, target_univ_id: int) -> Dict[str, str]:
-        """
-        Ανακτά Description, Objectives, κ.λπ. για ένα μάθημα.
-        Ψάχνει πρώτα στο πανεπιστήμιο-στόχο, μετά στην ευρύτερη βάση.
-        """
+        """Ανακτά Description, Objectives, κ.λπ. για ένα μάθημα από τη βάση."""
         
-        # 1. Προσπάθησε να βρει το μάθημα στο πανεπιστήμιο-στόχο
+        # 1. Ψάξε στο πανεπιστήμιο-στόχο
         course = self.db.query(Course).filter(
             Course.lesson_name == course_name,
             Course.university_id == target_univ_id
         ).first()
         
-        # 2. Αν δεν βρεθεί, ψάξε το πρώτο που υπάρχει στη βάση (για να έχει περιγραφή)
+        # 2. Αν δεν βρεθεί, ψάξε το πρώτο που υπάρχει στη βάση (ως fallback)
         if not course:
-             course = self.db.query(Course).filter(
+              course = self.db.query(Course).filter(
                 Course.lesson_name == course_name
             ).first()
 
         if course:
+            # Χρησιμοποιούμε getattr για ασφαλή πρόσβαση σε πιθανόν λείποντα attributes
             return {
                 "description": (getattr(course, "description", "") or "Δεν βρέθηκε περιγραφή.").strip(),
                 "objectives": (getattr(course, "objectives", "") or "Δεν βρέθηκαν στόχοι.").strip(),
                 "learning_outcomes": (getattr(course, "learning_outcomes", "") or "Δεν βρέθηκαν μαθησιακά αποτελέσματα.").strip(),
                 "course_content": (getattr(course, "course_content", "") or "Δεν βρέθηκε περιεχόμενο μαθήματος.").strip(),
             }
+        
         return {
             "description": "Δεν βρέθηκε περιγραφή.",
             "objectives": "Δεν βρέθηκαν στόχοι.",
@@ -96,12 +92,10 @@ class CourseRecommender:
 
 
     # ==========================================================
-    # 1️⃣ Δημιουργία προφίλ ανά πτυχίο (ΕΝΗΜΕΡΩΜΕΝΟ)
+    # 1️⃣ Δημιουργία προφίλ ανά πτυχίο
     # ==========================================================
     def build_degree_profiles(self, univ_id: int) -> List[Dict[str, Any]]:
-        """
-        Δημιουργεί λίστα από degree profiles για το πανεπιστήμιο.
-        """
+        """Δημιουργεί λίστα από degree profiles για το πανεπιστήμιο."""
         profiles: List[Dict[str, Any]] = []
         university = self.get_university(univ_id)
         if not university or not getattr(university, "programs", []):
@@ -119,7 +113,7 @@ class CourseRecommender:
                 if getattr(c, "lesson_name", None)
             })
 
-            # Συλλογή δεξιοτήτων (Skills) - Διορθωμένο σε προηγούμενο βήμα
+            # Συλλογή δεξιοτήτων (Skills)
             skills = set()
             for course in program_courses:
                 for cs in getattr(course, "skills", []):
@@ -138,14 +132,14 @@ class CourseRecommender:
                     "program_id": program_id,
                     "degree_title": title,
                     "degree_type": degree_type,
-                    "skills": skills,
-                    "courses": courses,
+                    "skills": skills, # Δεξιότητες του πτυχίου
+                    "courses": courses, # Μαθήματα του πτυχίου
                 })
 
         return profiles
 
     # ==========================================================
-    # 2️⃣ Εύρεση παρόμοιων πτυχίων (Παραμένει ίδιο)
+    # 2️⃣ Εύρεση παρόμοιων πτυχίων
     # ==========================================================
     def find_similar_degrees(
         self,
@@ -153,7 +147,7 @@ class CourseRecommender:
         all_profiles: List[Dict[str, Any]],
         top_n: int = 5,
     ) -> List[Dict[str, Any]]:
-        """Επιστρέφει παρόμοια πτυχία με βάση skills + degree_type."""
+        """Επιστρέφει παρόμοια πτυχία με βάση skills + courses + degree_type (TF-IDF)."""
         if not target_profile or not all_profiles:
             return []
 
@@ -163,12 +157,12 @@ class CourseRecommender:
             p for p in all_profiles
             if p.get("degree_type", "") == degree_type
             and p.get("university_id") != target_profile.get("university_id")
-            and p.get("skills") 
+            and (p.get("skills") or p.get("courses")) # Πρέπει να έχει περιεχόμενο
         ]
         if not candidates:
             return []
 
-        # Συνδυασμός skills + courses για πιο θεματική σύγκριση
+        # Συνδυασμός skills + courses για σύγκριση
         target_text = " ".join(target_profile.get("skills", []) + target_profile.get("courses", []))
         docs = [
              " ".join(p.get("skills", []) + p.get("courses", []))
@@ -182,13 +176,15 @@ class CourseRecommender:
         vectorizer = TfidfVectorizer()
         vectors = vectorizer.fit_transform(docs_with_target)
         
+        # vectors[0:1] είναι ο στόχος, vectors[1:] είναι οι υποψήφιοι
         sims = cosine_similarity(vectors[0:1], vectors[1:]).flatten()
 
         ranked = sorted(zip(candidates, sims), key=lambda x: x[1], reverse=True)
+        # Επιστρέφουμε τα κορυφαία παρόμοια πτυχία
         return [p for p, _ in ranked[:top_n]]
 
     # ==========================================================
-    # 3️⃣ Πρόταση μαθημάτων για ένα συγκεκριμένο πτυχίο (ΔΙΟΡΘΩΜΕΝΟ)
+    # 3️⃣ Πρόταση μαθημάτων για ένα συγκεκριμένο πτυχίο (Βασικός Αλγόριθμος)
     # ==========================================================
     def suggest_courses_for_degree(
         self,
@@ -196,20 +192,24 @@ class CourseRecommender:
         similar_degrees: List[Dict[str, Any]],
         top_n: int = 10,
     ) -> List[Dict[str, Any]]:
-        """Προτείνει μαθήματα για συγκεκριμένο πτυχίο, δίνοντας έμφαση στη συνάφεια (compatibility) και επιστρέφει details."""
+        """
+        Προτείνει μαθήματα για συγκεκριμένο πτυχίο με βάση τη συμβατότητα, 
+        τη συχνότητα και την πρωτοτυπία (TF-IDF/Cosine Similarity).
+        """
         if not target_degree or not similar_degrees:
-            return [{"info": "Δεν υπάρχουν διαθέσιμα παρόμοια πτυχία."}]
+            return [{"info": "Δεν υπάρχουν διαθέσιμα παρόμοια πτυχία για σύσταση."}]
 
         target_skills = set(target_degree.get("skills", []))
-        target_courses = set(target_degree.get("courses", []))
+        target_courses = set(target_degree.get("courses", [])) # Τα μαθήματα που ήδη έχει ο στόχος
 
         course_freq = defaultdict(int)
         course_skills = defaultdict(set)
         
-        # 1. Συγκέντρωση μαθημάτων και skills
+        # 1. Συγκέντρωση μαθημάτων και skills από τα παρόμοια πτυχία
         for deg in similar_degrees:
             deg_skills = set(deg.get("skills", []))
             for course in deg.get("courses", []):
+                # Εξαίρεση μαθημάτων που έχει ήδη ο στόχος
                 if not course or course in target_courses:
                     continue
                 
@@ -217,58 +217,66 @@ class CourseRecommender:
                 course_skills[course].update(deg_skills)
 
         if not course_freq:
-            return [{"info": "Δεν βρέθηκαν νέα μαθήματα."}]
+            return [{"info": "Δεν βρέθηκαν νέα μαθήματα για πρόταση."}]
 
-        # 2. Υπολογισμός scores (TF-IDF, Novelty, Compatibility)
-        course_docs = [" ".join(course_skills[c]) for c in course_freq]
+        # 2. Υπολογισμός scores (TF-IDF για Novelty)
+        courses_list = list(course_freq.keys())
+        course_docs = [" ".join(course_skills[c]) for c in courses_list]
         target_doc = " ".join(target_skills)
         docs = course_docs + [target_doc]
         
         vectorizer = TfidfVectorizer()
         if all(not doc.strip() for doc in docs):
+             # Αν δεν υπάρχουν δεξιότητες, η σύγκριση TF-IDF αποτυγχάνει.
+             # Μπορούμε να χρησιμοποιήσουμε μόνο τη συχνότητα σε αυτή την περίπτωση,
+             # αλλά για συνέπεια επιστρέφουμε σφάλμα.
              return [{"info": "Η σύσταση απέτυχε λόγω έλλειψης δεξιοτήτων (skills) για σύγκριση."}]
 
         vectors = vectorizer.fit_transform(docs)
+        # Ομοιότητα των προτεινόμενων μαθημάτων με τον στόχο
         sims = cosine_similarity(vectors[-1], vectors[:-1]).flatten()
 
         results = []
         max_freq = max(course_freq.values()) if course_freq else 1
         target_univ_id = target_degree["university_id"]
 
-        # 3. Βαθμολόγηση και ανάκτηση λεπτομερειών
-        for i, cname in enumerate(course_freq.keys()):
+        # 3. Τελική Βαθμολόγηση και ανάκτηση λεπτομερειών
+        for i, cname in enumerate(courses_list):
             skills = course_skills[cname]
             
             freq_score = course_freq[cname] / max_freq
             new_skills = skills - target_skills
             
+            # Υπολογισμός Συμβατότητας (Jaccard Index)
             intersection_size = len(skills & target_skills)
             union_size = len(skills | target_skills)
             compat_score = intersection_size / union_size if union_size else 0.0
 
-            novelty_score = 1.0 - sims[i]
-            new_skill_score = len(new_skills) / (len(skills) + 1)
+            novelty_score = 1.0 - sims[i] # Πρωτοτυπία (1 - Ομοιότητα)
+            new_skill_score = len(new_skills) / (len(skills) + 1) # Βάρος στις νέες δεξιότητες
             
-            compatibility_factor = 1.0 if compat_score >= 0.1 else 0.05
+            # Παράγοντας ποινής για πολύ χαμηλή συμβατότητα
+            compatibility_factor = 1.0 if compat_score >= 0.1 else 0.05 
             
+            # Σταθμισμένη τελική βαθμολογία
             total_score = round(
                 compatibility_factor * (
-                    0.40 * freq_score +
-                    0.35 * compat_score +
-                    0.15 * new_skill_score +
-                    0.10 * novelty_score
+                    0.40 * freq_score +         # Συχνότητα (Δημοφιλία)
+                    0.35 * compat_score +       # Συμβατότητα (Jaccard)
+                    0.15 * new_skill_score +    # Εμπλουτισμός (Νέες Skills)
+                    0.10 * novelty_score        # Πρωτοτυπία (TF-IDF)
                 ),
                 3
             )
             
-            # 💡 ΝΕΟ: Ανάκτηση πλήρων λεπτομερειών μαθήματος
+            # Ανάκτηση πλήρων λεπτομερειών μαθήματος
             course_details = self.get_course_details_by_name(cname, target_univ_id)
 
             results.append({
                 "course": cname,
                 "score": total_score,
-                "new_skills": sorted(new_skills),
-                "compatible_skills": sorted(skills & target_skills),
+                "new_skills": sorted(list(new_skills)),
+                "compatible_skills": sorted(list(skills & target_skills)),
                 "description": course_details["description"],
                 "objectives": course_details["objectives"],
                 "learning_outcomes": course_details["learning_outcomes"],
@@ -277,7 +285,9 @@ class CourseRecommender:
 
         return sorted(results, key=lambda x: x["score"], reverse=True)[:top_n]
     
-    # Οι υπόλοιπες μέθοδοι (4.1, 4.2, 4.3) παραμένουν ίδιες, καθώς καλούν την suggest_courses_for_degree
+    # ==========================================================
+    # 4.1️⃣ Πρόταση μαθημάτων για ΥΠΑΡΧΟΝΤΑ πτυχία
+    # ==========================================================
     def suggest_courses_for_existing_degrees(
         self,
         target_univ_id: int,
@@ -285,7 +295,6 @@ class CourseRecommender:
         top_n: int = 10
     ) -> Dict[str, Any]:
         """Προτείνει μαθήματα για κάθε υπάρχον πτυχίο του πανεπιστημίου."""
-        # ... (Κώδικας παραμένει ίδιος)
         target_profiles = self.build_degree_profiles(target_univ_id)
         if not target_profiles:
             return {"info": "Δεν βρέθηκαν υπάρχοντα πτυχία για ανάλυση."}
@@ -293,57 +302,98 @@ class CourseRecommender:
         suggestions = {}
         
         for target_deg in target_profiles:
+            # Βρες παρόμοια πτυχία (από τη δεξαμενή)
             similar = self.find_similar_degrees(target_deg, all_profiles, top_n=5)
             if not similar:
                 continue
                 
+            # Χρησιμοποίησε τον βασικό αλγόριθμο για σύσταση
             suggested = self.suggest_courses_for_degree(target_deg, similar, top_n)
             title = target_deg["degree_title"].strip()
             suggestions[title] = suggested
 
-        return suggestions or {"info": "Δεν βρέθηκαν υπάρχοντα πτυχία για ανάλυση."}
+        return suggestions or {"info": "Δεν βρέθηκαν προτάσεις για τα υπάρχοντα πτυχία."}
 
+    # ==========================================================
+    # 4.2️⃣ Πρόταση Πιθανών Νέων Πτυχίων (ΔΙΟΡΘΩΜΕΝΟ)
+    # ==========================================================
     def suggest_new_degree_proposals(
         self,
         target_univ_id: int,
         all_profiles: List[Dict[str, Any]],
         top_n: int = 10
     ) -> List[Dict[str, Any]]:
-        """Προτείνει πιθανά νέα πτυχία για το πανεπιστήμιο."""
-        # ... (Κώδικας παραμένει ίδιος)
+        """Προτείνει πιθανά νέα πτυχία, χρησιμοποιώντας τον αλγόριθμο βαθμολόγησης για τα μαθήματα."""
         target_profiles = self.build_degree_profiles(target_univ_id)
-        target_titles = {self.normalize_name(d["degree_title"]) for d in target_profiles}
         
-        candidate_titles = {}
+        target_titles_normalized = {self.normalize_name(d["degree_title"]) for d in target_profiles}
+        
+        # Ομαδοποίησε όλα τα πτυχία ανά τίτλο (που λείπει από τον στόχο)
+        candidate_groups = defaultdict(list)
+        
         for d in all_profiles:
             norm_title = self.normalize_name(d["degree_title"])
-            if norm_title not in target_titles:
-                 candidate_titles[norm_title] = d["degree_title"] # Κρατάμε τον αρχικό τίτλο
-        
+            if d.get("university_id") != target_univ_id and norm_title not in target_titles_normalized:
+                candidate_groups[norm_title].append(d)
+                
+        if not candidate_groups:
+            return [{"info": "Δεν εντοπίστηκαν νέα πιθανά πτυχία."}]
+
         new_degree_suggestions = []
         
-        for normalized_cand_title, cand_title in candidate_titles.items():
-            cand_degrees = [d for d in all_profiles if self.normalize_name(d["degree_title"]) == normalized_cand_title]
-            if not cand_degrees:
-                continue
+        for _, cand_degrees in candidate_groups.items():
+            cand_title = cand_degrees[0]["degree_title"]
+            cand_degree_type = cand_degrees[0]["degree_type"]
 
-            agg_courses = defaultdict(int)
-            for d in cand_degrees:
-                for c in d.get("courses", []):
-                    agg_courses[c] += 1
-
-            top_courses = sorted(agg_courses.items(), key=lambda x: x[1], reverse=True)[:top_n]
+            # 1. Δημιούργησε ένα "εικονικό" προφίλ στόχο για το ΝΕΟ πτυχίο. 
+            # Αυτό είναι ο συνδυασμός όλων των χαρακτηριστικών από τα παρόμοια πτυχία.
+            virtual_target_skills = set()
+            virtual_target_courses = set()
             
-            new_degree_suggestions.append({
+            for d in cand_degrees:
+                 virtual_target_skills.update(d.get("skills", []))
+                 virtual_target_courses.update(d.get("courses", []))
+
+            # Το virtual_target_profile αντιπροσωπεύει το νέο πτυχίο (πριν την υιοθέτηση)
+            virtual_target_profile = {
+                "university_id": target_univ_id, 
                 "degree_title": cand_title,
-                "suggested_courses": [{"course": c, "freq": f} for c, f in top_courses],
-            })
+                "degree_type": cand_degree_type,
+                # Τα skills και courses του virtual_target_profile είναι αυτά που 
+                # θα φέρει το πτυχίο, οπότε ο στόχος θα τα συγκρίνει με τα ΔΙΚΑ ΤΟΥ skills.
+                "skills": [], # Κενό, γιατί το πανεπιστήμιο-στόχος δεν έχει ακόμα αυτά τα skills/courses
+                "courses": [],
+            }
+            
+            # 2. Καλείται ο πλήρης αλγόριθμος βαθμολόγησης
+            # target_degree: Το virtual_target_profile (που είναι κενό στα courses/skills)
+            # similar_degrees: Η λίστα με όλα τα πτυχία που έχουν αυτόν τον τίτλο (προς σύσταση)
+            suggested_courses = self.suggest_courses_for_degree(
+                target_profiles[0] if target_profiles else virtual_target_profile, # Χρησιμοποιούμε το 1ο υπάρχον προφίλ για σύγκριση skills
+                cand_degrees,   
+                top_n
+            )
+            
+            # Φίλτραρε τα μαθήματα που έχουν score > 0
+            suggested_courses = [
+                c for c in suggested_courses if c['score'] > 0 
+            ]
+
+            if suggested_courses:
+                new_degree_suggestions.append({
+                    "degree_title": cand_title,
+                    "degree_type": cand_degree_type,
+                    "suggested_courses": suggested_courses,
+                })
 
         return new_degree_suggestions or [{"info": "Δεν εντοπίστηκαν νέα πιθανά πτυχία."}]
 
+
+    # ==========================================================
+    # 4.3️⃣ suggest_courses (MAIN FUNCTION)
+    # ==========================================================
     def suggest_courses(self, target_univ_id: int, top_n: int = 10) -> Dict[str, Any]:
         """Προτείνει μαθήματα για υπάρχοντα και πιθανά νέα πτυχία."""
-        # ... (Κώδικας παραμένει ίδιος)
         all_univs = self.get_all_universities()
         all_profiles = []
         for u in all_univs:
@@ -354,12 +404,14 @@ class CourseRecommender:
         if not all_profiles:
             return {"info": "Δεν βρέθηκαν διαθέσιμα προφίλ πτυχίων σε κανένα πανεπιστήμιο."}
 
+        # 1. Συστάσεις για εμπλουτισμό υπαρχόντων πτυχίων
         existing_suggestions = self.suggest_courses_for_existing_degrees(
             target_univ_id,
             all_profiles,
             top_n
         )
         
+        # 2. Συστάσεις για πρόταση νέων πτυχίων
         new_degree_proposals = self.suggest_new_degree_proposals(
             target_univ_id,
             all_profiles,
