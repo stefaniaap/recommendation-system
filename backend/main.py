@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 # Εισαγωγές για τη Βάση Δεδομένων, μοντέλα και Recommenders
 from backend.database import get_db, init_db
-from backend.models import University, CourseSkill 
+from backend.models import University, DegreeProgram, Course, Skill, CourseSkill
 from backend.core import UniversityRecommender 
 from backend.core2 import CourseRecommender 
 
@@ -19,12 +19,10 @@ from backend.core2 import CourseRecommender
 class RecommendedCourse(BaseModel):
     course_name: str = Field(..., description="Όνομα του προτεινόμενου μαθήματος.")
     score: float = Field(..., description="Σκορ συνάφειας/σύστασης (0.0 έως 1.0).", ge=0.0, le=1.0)
-    # 💡 ΠΡΟΣΘΗΚΗ ΝΕΩΝ ΠΕΔΙΩΝ
     description: str = Field("", description="Αναλυτική περιγραφή του μαθήματος.")
     objectives: str = Field("", description="Στόχοι του μαθήματος.")
     learning_outcomes: str = Field("", description="Μαθησιακά αποτελέσματα του μαθήματος.")
     course_content: str = Field("", description="Περιεχόμενο του μαθήματος.")
-    # Προσθήκη skills για πληρότητα
     new_skills: List[str] = Field([], description="Νέες δεξιότητες που εισάγει το μάθημα.")
     compatible_skills: List[str] = Field([], description="Κοινές δεξιότητες με το πτυχίο.")
 
@@ -34,6 +32,11 @@ class CourseRecommendationsResponse(BaseModel):
     program_id: int = Field(..., description="Το Program ID (-1 για προτεινόμενα νέα πτυχία)")
     degree: str
     recommendations: List[RecommendedCourse] 
+
+# ✅ Προσθήκη για POST endpoint
+class RecommendRequest(BaseModel):
+    university_id: int
+    top_n: int = 10
 
 
 app = FastAPI(title="Academic Recommender API", version="1.0")
@@ -58,7 +61,7 @@ def startup_event():
         print(f"Error initializing DB: {e}")
 
 # =======================================================
-# 💡 ENDPOINT 1: Πρόταση Μαθημάτων ανά Πρόγραμμα (Program ID) - Internal Use
+# 💡 ENDPOINT 1: Πρόταση Μαθημάτων ανά Πρόγραμμα (Program ID)
 # =======================================================
 @app.get("/recommend/courses/{university_id}", include_in_schema=False)
 def recommend_courses_for_degree(
@@ -109,7 +112,6 @@ def recommend_courses_for_degree(
             top_n=top_n_courses
         )
         
-        # 💡 ΔΙΟΡΘΩΜΕΝΟ MAPPING: Πλέον περνάμε ΟΛΑ τα πεδία
         final_recommendations = [
             {
                 "course_name": item['course'], 
@@ -134,7 +136,7 @@ def recommend_courses_for_degree(
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
 
 # =======================================================
-# 💡 ENDPOINT 2: Πρόταση Μαθημάτων ανά Όνομα Πτυχίου (Για Frontend)
+# 💡 ENDPOINT 2: Πρόταση Μαθημάτων ανά Όνομα Πτυχίου (Frontend)
 # =======================================================
 @app.get(
     "/recommend/courses/{university_id}/{degree_name}",
@@ -147,9 +149,6 @@ async def recommend_courses_by_name(
     top_n_courses: int = 10,
     db: Session = Depends(get_db)
 ):
-    """
-    Χρησιμοποιείται κυρίως για προτεινόμενα ΝΕΑ πτυχία. Δημιουργεί ένα synthetic profile.
-    """
     decoded_degree_name = unquote(degree_name).strip()
     recommender = CourseRecommender(db)
 
@@ -174,7 +173,6 @@ async def recommend_courses_by_name(
             detail=f"Το Πτυχίο '{decoded_degree_name}' δεν βρέθηκε σε κανένα πανεπιστήμιο για ανάλυση."
         )
 
-    # Δημιουργία Εικονικού (Synthetic) Target Profile
     degree_type = representative_profiles[0].get("degree_type", "N/A")
     all_skills = set()
     all_courses = set()
@@ -212,7 +210,6 @@ async def recommend_courses_by_name(
         top_n=top_n_courses
     )
     
-    # 💡 ΔΙΟΡΘΩΜΕΝΟ MAPPING: Πλέον περνάμε ΟΛΑ τα πεδία
     final_recommendations = [
         {
             "course_name": item['course'], 
@@ -235,7 +232,6 @@ async def recommend_courses_by_name(
         recommendations=final_recommendations
     )
 
-
 # =======================================================
 # ΛΟΙΠΑ ENDPOINTS (Παραμένουν ως είχαν)
 # =======================================================
@@ -257,6 +253,24 @@ def suggest_courses_for_university(univ_id: int, top_n: int = 10, db: Session = 
     recommender = CourseRecommender(db)
     result = recommender.suggest_courses(univ_id, top_n)
     return {"university_id": univ_id, "recommendations": result}
+
+# ✅ Προσθήκη POST endpoint από 1η έκδοση
+@app.post("/recommendations")
+def post_recommendations(payload: RecommendRequest, db: Session = Depends(get_db)):
+    recommender = CourseRecommender(db)
+    result = recommender.suggest_courses(payload.university_id, payload.top_n)
+    return {"university_id": payload.university_id, "recommendations": result}
+
+# ✅ Προσθήκη debug endpoint από 1η έκδοση
+@app.get("/debug/db-counts")
+def db_counts(db: Session = Depends(get_db)):
+    return {
+        "University": db.query(University).count(),
+        "DegreeProgram": db.query(DegreeProgram).count(),
+        "Course": db.query(Course).count(),
+        "Skill": db.query(Skill).count(),
+        "CourseSkill": db.query(CourseSkill).count(),
+    }
 
 @app.get("/universities")
 def get_all_universities(db: Session = Depends(get_db)):

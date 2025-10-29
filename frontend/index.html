@@ -7,24 +7,19 @@
     <title>Academic Insight Hub</title>
     <style>
         /* =================================================================
-           ΓΕΝΙΚΕΣ ΜΕΤΑΒΛΗΤΕΣ & SIDEBAR ΧΡΩΜΑΤΑ
-           ================================================================= */
+       ΓΕΝΙΚΕΣ ΜΕΤΑΒΛΗΤΕΣ & SIDEBAR ΧΡΩΜΑΤΑ
+       ================================================================= */
         :root {
             --primary-color: #007bff;
             --secondary-color: #6c757d;
             --sidebar-color: #2c3e50;
-            /* Σκούρο Navy Blue */
             --info-blue-color: #17a2b8;
-            /* Χρώμα για το Logo */
             --background-color: #f8f9fa;
             --card-background: #ffffff;
             --border-radius: 8px;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
-        /* =================================================================
-           ΚΥΡΙΑ ΔΟΜΗ (FLEXBOX)
-           ================================================================= */
         body {
             font-family: 'Arial', sans-serif;
             background-color: var(--background-color);
@@ -35,9 +30,6 @@
             box-sizing: border-box;
         }
 
-        /* =================================================================
-           SIDEBAR STYLES (ΣΤΑΘΕΡΑ)
-           ================================================================= */
         .sidebar {
             width: 240px;
             background-color: var(--sidebar-color);
@@ -89,9 +81,6 @@
             padding-left: 15px;
         }
 
-        /* =================================================================
-           MAIN CONTENT STYLES
-           ================================================================= */
         .main-content {
             margin-left: 240px;
             flex-grow: 1;
@@ -107,7 +96,6 @@
             text-align: center;
         }
 
-        /* Τίτλος */
         .header {
             margin-bottom: 40px;
         }
@@ -118,7 +106,6 @@
             font-weight: 700;
         }
 
-        /* Dropdown Πανεπιστημίου */
         .selection-area {
             background: var(--card-background);
             padding: 30px;
@@ -141,15 +128,10 @@
             font-size: 1em;
             border: 1px solid #ced4da;
             border-radius: 4px;
-            box-sizing: border-box;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
             background-color: #fff;
             cursor: pointer;
         }
 
-        /* Κουτιά Μετρήσεων */
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -182,7 +164,6 @@
             margin: 0;
         }
 
-        /* Κουμπιά Πλοήγησης */
         .action-buttons {
             display: flex;
             justify-content: center;
@@ -231,7 +212,6 @@
     </style>
 </head>
 
-
 <body>
     <div class="sidebar">
         <div class="logo">Edu<span style="color: yellow;">Recommender</span></div>
@@ -247,10 +227,9 @@
     <div class="main-content">
         <div class="container">
             <div class="header">
-                <h1>🎓 Academic Insight Hub </h1>
+                <h1>🎓 Academic Insight Hub</h1>
                 <p>Συστήματα Προτάσεων Ακαδημαϊκών Προγραμμάτων & Δεξιοτήτων</p>
             </div>
-
 
             <div class="selection-area">
                 <label for="university-select">Επιλέξτε Πανεπιστήμιο για Ανάλυση:</label>
@@ -258,7 +237,6 @@
                     <option value="" disabled selected>Φόρτωση Πανεπιστημίων...</option>
                 </select>
             </div>
-
 
             <div class="metrics-grid">
                 <div class="metric-card">
@@ -271,26 +249,115 @@
                 </div>
             </div>
 
-
             <div class="action-buttons">
-                <button id="degrees-btn" class="action-button" onclick="navigate('degrees')" disabled>
-                    ΠΡΟΤΕΙΝΕ ΠΤΥΧΙΑ (DEGREES)
-                </button>
-                <button id="courses-btn" class="action-button" onclick="navigate('courses')" disabled>
-                    ΠΡΟΤΕΙΝΕ ΜΑΘΗΜΑΤΑ (COURSES)
-                </button>
+                <button id="degrees-btn" class="action-button" disabled>ΠΡΟΤΕΙΝΕ ΠΤΥΧΙΑ (DEGREES)</button>
+                <button id="courses-btn" class="action-button" disabled>ΠΡΟΤΕΙΝΕ ΜΑΘΗΜΑΤΑ (COURSES)</button>
             </div>
 
+            <div id="results"></div>
         </div>
     </div>
 
-
-    <script src="script.js"></script>
     <script>
-        // Ρύθμιση active class για την τρέχουσα σελίδα
-        document.addEventListener('DOMContentLoaded', () => {
+        const API_URL = "/api"; // πιο σωστό για backend proxy
+
+        const universitySelect = document.getElementById('university-select');
+        const degreesBtn = document.getElementById('degrees-btn');
+        const coursesBtn = document.getElementById('courses-btn');
+        const resultsDiv = document.getElementById('results');
+
+        document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('nav-home').classList.add('active');
+            await loadUniversities();
         });
+
+        async function loadUniversities() {
+            try {
+                const res = await fetch(`${API_URL}/universities`);
+                const data = await res.json();
+                universitySelect.innerHTML = data.map(u =>
+                    `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("");
+                universitySelect.disabled = false;
+                degreesBtn.disabled = false;
+                coursesBtn.disabled = false;
+            } catch (err) {
+                universitySelect.innerHTML = `<option>Σφάλμα φόρτωσης</option>`;
+                console.error(err);
+            }
+        }
+
+        degreesBtn.addEventListener('click', () => fetchRecommendations('degrees'));
+        coursesBtn.addEventListener('click', () => fetchRecommendations('courses'));
+
+        async function fetchRecommendations(type) {
+            const uni = universitySelect.value;
+            if (!uni) return alert("Επιλέξτε πανεπιστήμιο!");
+
+            resultsDiv.innerHTML = "<p>⏳ Φόρτωση...</p>";
+
+            try {
+                const res = await fetch(`${API_URL}/recommendations`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ university_id: parseInt(uni), top_n: 5 })
+                });
+
+                if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error(`HTTP ${res.status}: ${text}`);
+                }
+
+                const raw = await res.json();
+                const rec = raw.recommendations || raw || {};
+                const normalized = normalize(rec);
+                renderResults(normalized);
+            } catch (err) {
+                console.error(err);
+                resultsDiv.innerHTML = `<p class="text-red-600">Σφάλμα: ${escapeHtml(err.message)}</p>`;
+            }
+        }
+
+        function normalize(rec) {
+            const out = { missing_degrees: [], missing_skills: [], missing_courses: [] };
+            out.missing_degrees = toScoredArray(rec.missing_degrees || rec.degrees || []);
+            out.missing_skills = toScoredArray(rec.missing_skills || rec.skills || []);
+            out.missing_courses = toScoredArray(rec.missing_courses || rec.courses || []);
+            return out;
+        }
+
+        function toScoredArray(arr) {
+            if (!Array.isArray(arr)) return [];
+            return arr.map(v => {
+                if (typeof v === "string") return { item: v, score: null };
+                const item = v.item || v.name || v.degree || v.course || JSON.stringify(v);
+                const score = v.score ?? v.similarity ?? v.sim ?? null;
+                return { item, score };
+            });
+        }
+
+        function renderResults(data) {
+            resultsDiv.innerHTML = `
+        <h2>📘 Προτεινόμενα Πτυχία</h2>
+        ${renderList(data.missing_degrees)}
+        <h2>💡 Προτεινόμενες Δεξιότητες</h2>
+        ${renderList(data.missing_skills)}
+        <h2>📗 Προτεινόμενα Μαθήματα</h2>
+        ${renderList(data.missing_courses)}
+      `;
+        }
+
+        function renderList(list) {
+            if (!list || !list.length) return `<p>Καμία πρόταση.</p>`;
+            return `<ul>${list.map(i =>
+                `<li>${escapeHtml(i.item)} <small>(score: ${i.score ?? '-'})</small></li>`
+            ).join("")}</ul>`;
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[m]);
+        }
     </script>
 </body>
 

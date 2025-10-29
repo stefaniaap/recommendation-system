@@ -121,7 +121,7 @@ class Skill(Base):
 
     skill_id = Column(Integer, primary_key=True)
     skill_name = Column(String(255), nullable=False)
-    skill_url = Column(Text)
+    skill_url = Column(String(512)) 
     esco_id = Column(String(64))
     esco_level = Column(String(32))
     created_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
