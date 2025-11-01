@@ -1,16 +1,25 @@
 # =============================================
-# backend/database.py (ΕΠΙΒΕΒΑΙΩΜΕΝΟ)
+# backend/database.py
 # =============================================
 
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
-# Υποθέτουμε ότι το Base εισάγεται από το models.py
-from backend.models import Base 
+from backend.models import Base  # Υποθέτουμε ότι το Base εισάγεται από το models.py
 
 # ============================
-# Connection string (προσαρμόστε αν χρειάζεται)
+# Περιβαλλοντικές μεταβλητές για σύνδεση στη βάση
 # ============================
-DATABASE_URL = "mysql+pymysql://root:2003Sept!@localhost:3306/recommender_test1"
+DB_HOST = os.getenv("DATABASE_HOST", "localhost")        # π.χ. "db" στο Docker, "localhost" τοπικά
+DB_PORT = os.getenv("DATABASE_PORT", "3306")
+DB_USER = os.getenv("DATABASE_USER", "root")
+DB_PASSWORD = os.getenv("DATABASE_PASSWORD", "")
+DB_NAME = os.getenv("DATABASE_NAME", "recommender_test1")
+
+# ============================
+# Connection string
+# ============================
+DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # ============================
 # Engine

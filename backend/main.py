@@ -254,6 +254,13 @@ def suggest_courses_for_university(univ_id: int, top_n: int = 10, db: Session = 
     result = recommender.suggest_courses(univ_id, top_n)
     return {"university_id": univ_id, "recommendations": result}
 
+
+
+class RecommendRequest(BaseModel):
+
+    university_id: int
+
+    top_n: int = 10
 # ✅ Προσθήκη POST endpoint από 1η έκδοση
 @app.post("/recommendations")
 def post_recommendations(payload: RecommendRequest, db: Session = Depends(get_db)):

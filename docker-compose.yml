@@ -13,7 +13,7 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 30
@@ -31,16 +31,10 @@ services:
       DATABASE_NAME: recommender_test1
       DATABASE_USER: root
       DATABASE_PASSWORD: 2003Sept!
-    command: ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8000:8000"
     healthcheck:
-      # no curl/wget required; uses Python stdlib
-      test:
-        [
-          "CMD-SHELL",
-          "python - <<'PY'\nimport sys,urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs', timeout=3); print('ok')\nPY"
-        ]
+      test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1:8000/docs || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 30
@@ -51,9 +45,17 @@ services:
       dockerfile: Dockerfile
     depends_on:
       api:
-        condition: service_healthy   # now valid because api has a healthcheck
+        condition: service_healthy
+    environment:
+      # Αν χρειαστείς URL του API μέσα στο frontend, μπορείς να βάλεις
+      REACT_APP_API_URL: http://api:8000
     ports:
       - "3000:80"
 
 volumes:
   db_data:
+
+
+networks:
+  default:
+    name: skillcrawl_network

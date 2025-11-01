@@ -1,4 +1,7 @@
-const API_BASE_URL = 'http://127.0.0.1:8000';
+// === ΔΙΟΡΘΩΣΗ: Δυναμικό API_BASE_PATH ανάλογα με το περιβάλλον ===
+const API_BASE_URL = window.location.hostname === 'localhost'
+    ? 'http://localhost:8000'
+    : 'http://api:8000';
 
 // =======================================================
 // 1. Βοηθητική Συνάρτηση Χρωμάτων

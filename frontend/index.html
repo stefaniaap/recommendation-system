@@ -6,9 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Academic Insight Hub</title>
     <style>
-        /* =================================================================
-       ΓΕΝΙΚΕΣ ΜΕΤΑΒΛΗΤΕΣ & SIDEBAR ΧΡΩΜΑΤΑ
-       ================================================================= */
         :root {
             --primary-color: #007bff;
             --secondary-color: #6c757d;
@@ -27,7 +24,6 @@
             padding: 0;
             display: flex;
             min-height: 100vh;
-            box-sizing: border-box;
         }
 
         .sidebar {
@@ -217,9 +213,9 @@
         <div class="logo">Edu<span style="color: yellow;">Recommender</span></div>
         <nav class="sidebar-nav">
             <ul>
-                <li><a href="index.html" id="nav-home">🏠 Αρχική</a></li>
-                <li><a href="results.html" id="nav-results">📊 Αποτελέσματα/Προτάσεις</a></li>
-                <li><a href="courses.html" id="nav-courses">📚 Προτεινόμενα Μαθήματα</a></li>
+                <li><a href="index.html" class="active">🏠 Αρχική</a></li>
+                <li><a href="results.html">📊 Αποτελέσματα/Προτάσεις</a></li>
+                <li><a href="courses.html">📚 Προτεινόμενα Μαθήματα</a></li>
             </ul>
         </nav>
     </div>
@@ -258,107 +254,13 @@
         </div>
     </div>
 
+    <!-- ✅ Έλεγχος φόρτωσης -->
     <script>
-        const API_URL = "/api"; // πιο σωστό για backend proxy
-
-        const universitySelect = document.getElementById('university-select');
-        const degreesBtn = document.getElementById('degrees-btn');
-        const coursesBtn = document.getElementById('courses-btn');
-        const resultsDiv = document.getElementById('results');
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            document.getElementById('nav-home').classList.add('active');
-            await loadUniversities();
-        });
-
-        async function loadUniversities() {
-            try {
-                const res = await fetch(`${API_URL}/universities`);
-                const data = await res.json();
-                universitySelect.innerHTML = data.map(u =>
-                    `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("");
-                universitySelect.disabled = false;
-                degreesBtn.disabled = false;
-                coursesBtn.disabled = false;
-            } catch (err) {
-                universitySelect.innerHTML = `<option>Σφάλμα φόρτωσης</option>`;
-                console.error(err);
-            }
-        }
-
-        degreesBtn.addEventListener('click', () => fetchRecommendations('degrees'));
-        coursesBtn.addEventListener('click', () => fetchRecommendations('courses'));
-
-        async function fetchRecommendations(type) {
-            const uni = universitySelect.value;
-            if (!uni) return alert("Επιλέξτε πανεπιστήμιο!");
-
-            resultsDiv.innerHTML = "<p>⏳ Φόρτωση...</p>";
-
-            try {
-                const res = await fetch(`${API_URL}/recommendations`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ university_id: parseInt(uni), top_n: 5 })
-                });
-
-                if (!res.ok) {
-                    const text = await res.text();
-                    throw new Error(`HTTP ${res.status}: ${text}`);
-                }
-
-                const raw = await res.json();
-                const rec = raw.recommendations || raw || {};
-                const normalized = normalize(rec);
-                renderResults(normalized);
-            } catch (err) {
-                console.error(err);
-                resultsDiv.innerHTML = `<p class="text-red-600">Σφάλμα: ${escapeHtml(err.message)}</p>`;
-            }
-        }
-
-        function normalize(rec) {
-            const out = { missing_degrees: [], missing_skills: [], missing_courses: [] };
-            out.missing_degrees = toScoredArray(rec.missing_degrees || rec.degrees || []);
-            out.missing_skills = toScoredArray(rec.missing_skills || rec.skills || []);
-            out.missing_courses = toScoredArray(rec.missing_courses || rec.courses || []);
-            return out;
-        }
-
-        function toScoredArray(arr) {
-            if (!Array.isArray(arr)) return [];
-            return arr.map(v => {
-                if (typeof v === "string") return { item: v, score: null };
-                const item = v.item || v.name || v.degree || v.course || JSON.stringify(v);
-                const score = v.score ?? v.similarity ?? v.sim ?? null;
-                return { item, score };
-            });
-        }
-
-        function renderResults(data) {
-            resultsDiv.innerHTML = `
-        <h2>📘 Προτεινόμενα Πτυχία</h2>
-        ${renderList(data.missing_degrees)}
-        <h2>💡 Προτεινόμενες Δεξιότητες</h2>
-        ${renderList(data.missing_skills)}
-        <h2>📗 Προτεινόμενα Μαθήματα</h2>
-        ${renderList(data.missing_courses)}
-      `;
-        }
-
-        function renderList(list) {
-            if (!list || !list.length) return `<p>Καμία πρόταση.</p>`;
-            return `<ul>${list.map(i =>
-                `<li>${escapeHtml(i.item)} <small>(score: ${i.score ?? '-'})</small></li>`
-            ).join("")}</ul>`;
-        }
-
-        function escapeHtml(s) {
-            return String(s).replace(/[&<>"']/g, m => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            })[m]);
-        }
+        console.log("✅ Το index.html φορτώθηκε — ετοιμάζουμε σύνδεση με script.js");
     </script>
+
+    <!-- ✅ Σύνδεση με script.js -->
+    <script src="./script.js" defer></script>
 </body>
 
 </html>
