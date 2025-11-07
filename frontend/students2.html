@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edu Recommender - University Analyst Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        /* --------------------------- CSS Variables / Theme Colors --------------------------- */
+        :root {
+            --primary-color: #6a9bd8;
+            --analyst-color: #5cb85c;
+            --analyst-light-color: #79c792;
+            --secondary-color: #6c757d;
+            --background-color: #f4f6f9;
+            --sidebar-color: #2c3e50;
+            --card-background: #ffffff;
+            --border-radius: 8px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --active-sidebar-color: rgba(255, 255, 255, 0.1);
+            --active-sidebar-text: white;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --------------------------- SIDEBAR STYLING --------------------------- */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-color);
+            color: #ecf0f1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo-section {
+            padding-bottom: 25px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+
+        .logo-section a {
+            text-decoration: none;
+        }
+
+        .logo-placeholder {
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-align: center;
+        }
+
+        .logo-placeholder span {
+            color: #ecf0f1;
+        }
+
+        .sidebar nav {
+            width: 100%;
+        }
+
+        .sidebar nav a {
+            color: #ecf0f1;
+            text-decoration: none;
+            padding: 10px 15px;
+            display: block;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .sidebar nav a:hover {
+            background-color: var(--active-sidebar-color);
+            color: var(--primary-color);
+        }
+
+        .sidebar nav a.active-landing {
+            background-color: var(--active-sidebar-color);
+            color: var(--active-sidebar-text);
+            font-weight: 600;
+        }
+
+        .submenu-item {
+            padding-left: 35px !important;
+            font-size: 0.9em !important;
+            margin-top: -5px !important;
+        }
+
+        .submenu-item.active {
+            color: var(--analyst-light-color);
+        }
+
+        /* --------------------------- MAIN CONTENT STYLING --------------------------- */
+        .main-content {
+            flex-grow: 1;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #343a40;
+            font-size: 2.3em;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: var(--secondary-color);
+            font-size: 1.1em;
+            margin: 0;
+        }
+
+        /* --------------------------- SELECTION AREA --------------------------- */
+        .selection-area {
+            background: var(--card-background);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 40px;
+            border-top: 5px solid var(--analyst-light-color);
+        }
+
+        .selection-area label {
+            display: block;
+            font-size: 1.1em;
+            color: #495057;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        /* --------------------------- DROPDOWN --------------------------- */
+        #university-select {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1em;
+            border: 2px solid var(--analyst-light-color);
+            border-radius: 4px;
+            background-color: #fff;
+            cursor: pointer;
+            text-align: left;
+            transition: border-color 0.2s;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="292.4" height="292.4"><path fill="%2379c792" d="M287 69.4a17.6 17.6 0 0 0-13.6-6.8H19a17.6 17.6 0 0 0-13.6 6.8 17.6 17.6 0 0 0-3.4 13.6l127.3 127.3a17.6 17.6 0 0 0 24.8 0L290.4 83a17.6 17.6 0 0 0-3.4-13.6z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 12px;
+        }
+
+        #university-select:hover,
+        #university-select:focus {
+            border-color: var(--analyst-color);
+            box-shadow: 0 0 0 0.2rem rgba(92, 184, 92, 0.25);
+            outline: none;
+        }
+
+        #university-select option {
+            background-color: #fff;
+            color: #343a40;
+        }
+
+        #university-select option:hover,
+        #university-select option:checked,
+        #university-select option:focus {
+            background-color: var(--analyst-light-color) !important;
+            color: #343a40 !important;
+        }
+
+        /* --------------------------- METRICS GRID --------------------------- */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card {
+            background: var(--card-background);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            border: 2px solid var(--analyst-light-color);
+            transition: transform 0.3s;
+        }
+
+        .metric-card h3 {
+            font-size: 2.5em;
+            color: var(--analyst-color);
+            margin: 0 0 5px 0;
+            font-weight: 700;
+        }
+
+        .metric-card p {
+            font-size: 1em;
+            color: var(--secondary-color);
+            margin: 0;
+            font-weight: 600;
+        }
+
+        /* --------------------------- ACTION BUTTONS --------------------------- */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .action-button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            width: 50%;
+            max-width: 300px;
+            text-transform: uppercase;
+        }
+
+        .action-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        #degrees-btn {
+            background-color: var(--analyst-color);
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #degrees-btn:hover:not(:disabled) {
+            background-color: #4cae4c;
+        }
+
+        #courses-btn {
+            background-color: #e0e0e0;
+            color: var(--secondary-color);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #courses-btn:hover:not(:disabled) {
+            background-color: #cccccc;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- --------------------------- SIDEBAR --------------------------- -->
+    <div class="sidebar">
+        <div class="logo-section">
+            <a href="landing_page.html">
+                <div class="logo-placeholder">
+                    <i class="fas fa-graduation-cap"></i> Edu <span>Recommender</span>
+                </div>
+            </a>
+        </div>
+
+        <nav>
+            <a href="landing_page.html"><i class="fas fa-home"></i> Home</a>
+            <a href="university_analysis.html" class="active-landing"><i class="fas fa-university"></i> Analyst Role</a>
+            <a href="university_analysis.html" class="submenu-item"><i class="fas fa-chart-line"></i> Dashboard
+                Overview</a>
+            <a href="analyst_recommendations.html" class="submenu-item"><i class="fas fa-lightbulb"></i> New Program
+                Proposals</a>
+            <a href="analyst_existing_courses.html" class="submenu-item"><i class="fas fa-book-open"></i> Existing
+                Course Suggestions</a>
+            <a href="student_search.html" style="margin-top: 20px;"><i class="fas fa-user-graduate"></i> Student
+                Role</a>
+            <a href="student_search.html" class="submenu-item"><i class="fas fa-search"></i> New Degree
+                Recommendations</a>
+            <a href="student_elective_courses.html" class="submenu-item"><i class="fas fa-tasks"></i> Elective Course
+                Suggestions</a>
+        </nav>
+    </div>
+
+    <!-- --------------------------- MAIN CONTENT --------------------------- -->
+    <div class="main-content">
+        <div class="container">
+            <div class="header">
+                <h1><i class="fas fa-university" style="color: var(--analyst-color);"></i> University Analyst Dashboard
+                </h1>
+                <p>Metrics Overview, Gap Analysis, and Program Recommendations</p>
+            </div>
+
+            <!-- University Selection -->
+            <div class="selection-area">
+                <label for="university-select">Select University for Analysis:</label>
+                <select id="university-select" disabled>
+                    <option value="" disabled selected>Loading Universities...</option>
+                </select>
+            </div>
+
+            <!-- Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3 id="total-programs">0</h3>
+                    <p>Total Study Programs</p>
+                </div>
+                <div class="metric-card">
+                    <h3 id="recognized-skills">0</h3>
+                    <p>Recognized Skills (ESCO)</p>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="action-buttons">
+                <button id="degrees-btn" class="action-button" disabled>RUN NEW DEGREE ANALYSIS</button>
+                <button id="courses-btn" class="action-button" disabled>RUN COURSE GAP ANALYSIS</button>
+            </div>
+
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="university_script.js"></script>
+</body>
+
+</html>

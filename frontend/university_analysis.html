@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edu Recommender - University Analyst Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-color: #6a9bd8;
+            --analyst-color: #5cb85c;
+            --analyst-light-color: #79c792;
+            --secondary-color: #6c757d;
+            --background-color: #f4f6f9;
+            --sidebar-color: #2c3e50;
+            --card-background: #ffffff;
+            --border-radius: 8px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --active-sidebar-color: rgba(255, 255, 255, 0.1);
+            --active-sidebar-text: white;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-color);
+            color: #ecf0f1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo-section {
+            padding-bottom: 25px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+
+        .logo-section a {
+            text-decoration: none;
+        }
+
+        .logo-placeholder {
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-align: center;
+        }
+
+        .logo-placeholder span {
+            color: #ecf0f1;
+        }
+
+        .sidebar nav {
+            width: 100%;
+        }
+
+        .sidebar nav a {
+            color: #ecf0f1;
+            text-decoration: none;
+            padding: 10px 15px;
+            display: block;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .sidebar nav a:hover {
+            background-color: var(--active-sidebar-color);
+            color: var(--primary-color);
+        }
+
+        .sidebar nav a.active-landing {
+            background-color: var(--active-sidebar-color);
+            color: var(--active-sidebar-text);
+            font-weight: 600;
+        }
+
+        .submenu-item {
+            padding-left: 35px !important;
+            font-size: 0.9em !important;
+            margin-top: -5px !important;
+        }
+
+        .submenu-item.active {
+            color: var(--analyst-light-color);
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex-grow: 1;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #343a40;
+            font-size: 2.3em;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: var(--secondary-color);
+            font-size: 1.1em;
+            margin: 0;
+        }
+
+        /* METRICS GRID */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card {
+            background: var(--card-background);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            border: 2px solid var(--analyst-light-color);
+            transition: transform 0.3s;
+        }
+
+        .metric-card h3 {
+            font-size: 2.5em;
+            color: var(--analyst-color);
+            margin: 0 0 5px 0;
+            font-weight: 700;
+        }
+
+        .metric-card p {
+            font-size: 1em;
+            color: var(--secondary-color);
+            margin: 0;
+            font-weight: 600;
+        }
+
+        /* ACTION BUTTONS */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .action-button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            width: 50%;
+            max-width: 300px;
+            text-transform: uppercase;
+        }
+
+        .action-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        #degrees-btn {
+            background-color: var(--analyst-color);
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #degrees-btn:hover:not(:disabled) {
+            background-color: #4cae4c;
+        }
+
+        #courses-btn {
+            background-color: #e0e0e0;
+            color: var(--secondary-color);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #courses-btn:hover:not(:disabled) {
+            background-color: #cccccc;
+        }
+
+        /* --------------------------- CUSTOM DROPDOWN --------------------------- */
+        .custom-select-wrapper {
+            position: relative;
+            width: 100%;
+            font-size: 1em;
+            margin-bottom: 40px;
+        }
+
+        .custom-select {
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .custom-select-trigger {
+            padding: 12px 15px;
+            border: 2px solid var(--analyst-light-color);
+            border-radius: 4px;
+            background-color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .custom-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            border: 2px solid var(--analyst-light-color);
+            border-top: none;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 100;
+        }
+
+        .custom-option {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .custom-option:hover,
+        .custom-option.selected {
+            background-color: var(--analyst-light-color);
+            color: #fff;
+        }
+
+        .custom-select.open .custom-options {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="logo-section">
+            <a href="landing_page.html">
+                <div class="logo-placeholder">
+                    <i class="fas fa-graduation-cap"></i> Edu <span>Recommender</span>
+                </div>
+            </a>
+        </div>
+
+        <nav>
+            <a href="landing_page.html">
+                <i class="fas fa-home"></i> Home
+            </a>
+
+            <a href="university_analysis.html" class="active-landing">
+                <i class="fas fa-chart-line"></i> Analyst Role
+            </a>
+            <a href="results.html" class="submenu-item">
+                <i class="fas fa-lightbulb"></i> New Degree Proposals
+            </a>
+            <a href="courses.html" class="submenu-item">
+                <i class="fas fa-graduation-cap"></i> Recommended Degree Plan
+            </a>
+            <a href="courses2.html" class="submenu-item">
+                <i class="fas fa-layer-group"></i> Curriculum Enhancement
+            </a>
+
+            <a href="student_search.html" style="margin-top: 20px;">
+                <i class="fas fa-user-graduate"></i> Student Role
+            </a>
+            <a href="student_search.html" class="submenu-item">
+                <i class="fas fa-compass"></i> Personalized Recommendations
+            </a>
+            <a href="students.html" class="submenu-item">
+                <i class="fas fa-brain"></i> Degree-Based Recommendations
+            </a>
+        </nav>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="container">
+            <div class="header">
+                <h1><i class="fas fa-university" style="color: var(--analyst-color);"></i> University Analyst Dashboard
+                </h1>
+                <p>Metrics Overview, Gap Analysis, and Program Recommendations</p>
+            </div>
+
+            <!-- CUSTOM DROPDOWN -->
+            <div class="custom-select-wrapper">
+                <div class="custom-select">
+                    <div class="custom-select-trigger">Select University...</div>
+                    <div class="custom-options"></div>
+                </div>
+            </div>
+
+            <!-- Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3 id="total-programs">0</h3>
+                    <p>Total Study Programs</p>
+                </div>
+                <div class="metric-card">
+                    <h3 id="recognized-skills">0</h3>
+                    <p>Recognized Skills (ESCO)</p>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="action-buttons">
+                <button id="degrees-btn" class="action-button" disabled>RUN NEW DEGREE ANALYSIS</button>
+                <button id="courses-btn" class="action-button" disabled>RUN COURSE GAP ANALYSIS</button>
+            </div>
+
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <!-- JS -->
+    <script>
+        const API_BASE_URL = "http://127.0.0.1:8000";
+
+        function updateMetrics(metrics) {
+            document.getElementById("total-programs").textContent =
+                metrics.total_programs ?? "0";
+            document.getElementById("recognized-skills").textContent =
+                metrics.recognized_skills ?? "0";
+        }
+
+        async function loadUniversitiesCustom() {
+            const wrapper = document.querySelector('.custom-select-wrapper');
+            const trigger = wrapper.querySelector('.custom-select-trigger');
+            const optionsContainer = wrapper.querySelector('.custom-options');
+
+            // Fetch universities
+            try {
+                const response = await fetch(`${API_BASE_URL}/universities`);
+                const universities = await response.json();
+
+                optionsContainer.innerHTML = '';
+                universities.forEach(univ => {
+                    const option = document.createElement('div');
+                    option.classList.add('custom-option');
+                    option.dataset.value = univ.university_id;
+                    option.textContent = `${univ.university_name} (${univ.country})`;
+                    optionsContainer.appendChild(option);
+                });
+            } catch (err) {
+                optionsContainer.innerHTML = '<div class="custom-option">Failed to load universities</div>';
+                console.error(err);
+            }
+
+            // Toggle dropdown
+            trigger.addEventListener('click', () => {
+                wrapper.querySelector('.custom-select').classList.toggle('open');
+            });
+
+            // Option selection
+            optionsContainer.addEventListener('click', e => {
+                if (e.target.classList.contains('custom-option')) {
+                    const selected = optionsContainer.querySelector('.selected');
+                    if (selected) selected.classList.remove('selected');
+                    e.target.classList.add('selected');
+                    trigger.textContent = e.target.textContent;
+                    wrapper.querySelector('.custom-select').classList.remove('open');
+
+                    // Enable buttons & update metrics
+                    const selectedUnivId = e.target.dataset.value;
+                    document.getElementById('degrees-btn').disabled = false;
+                    document.getElementById('courses-btn').disabled = false;
+
+                    // Fetch metrics
+                    fetch(`${API_BASE_URL}/metrics/${selectedUnivId}`)
+                        .then(res => res.json())
+                        .then(metrics => updateMetrics(metrics))
+                        .catch(err => {
+                            console.error(err);
+                            updateMetrics({ total_programs: 'Error', recognized_skills: 'Error' });
+                        });
+                }
+            });
+
+            // Close dropdown if click outside
+            document.addEventListener('click', e => {
+                if (!wrapper.contains(e.target)) {
+                    wrapper.querySelector('.custom-select').classList.remove('open');
+                }
+            });
+        }
+
+        // Navigation buttons
+        document.getElementById('degrees-btn').addEventListener('click', () => {
+            const selected = document.querySelector('.custom-option.selected');
+            if (!selected) return alert('Please select a university first.');
+            const univ_id = selected.dataset.value;
+            window.location.href = `results.html?type=degrees&univ_id=${univ_id}`;
+        });
+
+        document.getElementById('courses-btn').addEventListener('click', () => {
+            const selected = document.querySelector('.custom-option.selected');
+            if (!selected) return alert('Please select a university first.');
+            const univ_id = selected.dataset.value;
+            window.location.href = `courses.html?type=courses&univ_id=${univ_id}`;
+        });
+
+        document.addEventListener('DOMContentLoaded', loadUniversitiesCustom);
+    </script>
+</body>
+
+</html>

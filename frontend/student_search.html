@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="el">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Academic Recommender - Σύσταση Μαθημάτων</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        /* --- Βασικά Στυλ & Μεταβλητές (Προσαρμογή Επαγγελματικού Design) --- */
+        :root {
+            --primary-color: #007BFF;
+            /* Έντονο Μπλε */
+            --secondary-color: #6C757D;
+            /* Απαλό Γκρι */
+            --bg-light: #f8f9fa;
+            /* Πολύ Ανοιχτό Γκρι Φόντο */
+            --card-bg: #ffffff;
+            /* Λευκό Φόντο Καρτών/Κουμπιών */
+            --font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font);
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-light);
+            line-height: 1.6;
+        }
+
+        h1 {
+            color: #343a40;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-align: center;
+        }
+
+        /* --- Αρχική Οθόνη Επιλογής (Hub) --- */
+        .selection-hub {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            /* Κεντράρισμα σε όλη την οθόνη */
+            text-align: center;
+            padding: 20px;
+        }
+
+        .selection-hub p {
+            color: var(--secondary-color);
+            font-size: 1.1em;
+            margin-bottom: 40px;
+        }
+
+        .button-group-large {
+            display: flex;
+            gap: 30px;
+            max-width: 900px;
+        }
+
+        .selection-button {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 25px;
+            border: 1px solid #ced4da;
+            border-radius: 12px;
+            background-color: var(--card-bg);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border: none;
+            /* Αφαιρεί το default button border */
+        }
+
+        .selection-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--primary-color);
+            /* Έμφαση στο hover */
+        }
+
+        .selection-button i {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .button-text {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #343a40;
+            margin-bottom: 5px;
+        }
+
+        .button-subtext {
+            font-size: 0.9em;
+            color: var(--secondary-color);
+        }
+
+        /* --- Στυλ για τη Φόρμα Φίλτρων --- */
+        #mainFormContainer {
+            padding: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .form-title {
+            text-align: left;
+            margin-top: 10px;
+            margin-bottom: 30px;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .filter-card {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        /* Διάταξη Φίλτρων */
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            appearance: none;
+            background-color: white;
+        }
+
+        /* Δεξιότητες (Accordion) */
+        .skill-category {
+            margin-top: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .category-header {
+            background-color: #f1f1f1;
+            padding: 10px 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-header:hover {
+            background-color: #e9ecef;
+        }
+
+        .category-content {
+            padding: 10px 15px;
+            display: none;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .skill-item {
+            display: inline-block;
+            margin-right: 15px;
+            margin-bottom: 5px;
+            white-space: nowrap;
+        }
+
+        /* Κουμπιά Δράσης Φόρμας */
+        .button-group-small {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .action-button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            font-size: 1.1em;
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .action-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Αποτελέσματα */
+        h2 {
+            margin-top: 40px;
+            color: #343a40;
+            font-size: 2em;
+            margin-bottom: 25px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        /* Progress Bar (Match Score) */
+        .score-container {
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #28a745;
+            transition: width 0.5s ease;
+        }
+
+        .skill-tag {
+            display: inline-block;
+            background-color: #e2f0ff;
+            color: var(--primary-color);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-right: 5px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="selectionHub" class="selection-hub">
+        <h1>Καλώς ήρθατε στον Academic Recommender!</h1>
+        <p>Παρακαλώ επιλέξτε τον τύπο σύστασης που σας ενδιαφέρει:</p>
+
+        <div class="button-group-large">
+            <button id="btnElectives" data-mode="personal" class="selection-button">
+                <i class="fas fa-pencil-alt fa-2x"></i>
+                <span class="button-text">ΠΡΟΤΑΣΗ ΜΑΘΗΜΑΤΩΝ ΕΠΙΛΟΓΗΣ</span>
+                <span class="button-subtext">Βάσει του τρέχοντος Πτυχίου σας και των Skills.</span>
+            </button>
+            <button id="btnNewDegrees" data-mode="general" class="selection-button">
+                <i class="fas fa-globe-europe fa-2x"></i>
+                <span class="button-text">ΠΡΟΤΑΣΗ ΝΕΩΝ ΠΤΥΧΙΩΝ</span>
+                <span class="button-subtext">Αναζήτηση προγραμμάτων παγκοσμίως, βάσει Skills.</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="mainFormContainer" style="display: none;">
+        <button id="backToHubBtn" class="back-button"><i class="fas fa-arrow-left"></i> Επιστροφή στην Επιλογή</button>
+
+        <h1 class="form-title">Διαμόρφωση Σύστασης <i id="modeTitle"></i></h1>
+
+        <div class="filter-card">
+            <h3><i class="fas fa-filter"></i> Φίλτρα Αναζήτησης</h3>
+
+            <div id="personalFilters" class="filter-grid">
+            </div>
+
+            <div id="generalFilters" class="filter-grid" style="display: none;">
+            </div>
+
+            <h4><i class="fas fa-cogs"></i> Δεξιότητες (Skills) που με ενδιαφέρουν:</h4>
+            <div id="skillsContainer"></div>
+
+            <div class="button-group-small">
+                <button id="actionBtn" class="action-button"></button>
+            </div>
+        </div>
+
+        <h2><i class="fas fa-list-alt"></i> Αποτελέσματα Συστάσεων</h2>
+        <div class="results-grid" id="results"></div>
+    </div>
+
+    <script src="student_search_script.js"></script>
+</body>
+
+</html>
