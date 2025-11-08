@@ -8,6 +8,8 @@ from backend.models import University, Course
 import json
 import re
 
+
+
 class CourseRecommender:
     """Recommender για προτάσεις μαθημάτων και πτυχίων ανά πανεπιστήμιο."""
 

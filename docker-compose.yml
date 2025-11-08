@@ -9,7 +9,7 @@ services:
       MYSQL_DATABASE: recommender_test1
       MYSQL_ROOT_HOST: "%"
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:

@@ -75,6 +75,7 @@
             border-left: 3px solid #007bff;
             padding-left: 8px;
             font-size: 0.9em;
+            /* Μικρότερο header */
         }
 
         .info-item p {
@@ -91,6 +92,7 @@
         }
 
         .course-card {
+            list-style: none;
             margin-bottom: 18px;
             padding: 20px;
             border-left: 6px solid;
@@ -151,27 +153,26 @@
             color: #000 !important;
         }
 
+        .mt-5 {
+            margin-top: 3rem !important;
+        }
+
+        .mt-3 {
+            margin-top: 1rem !important;
+        }
+
+        .mb-3 {
+            margin-bottom: 1rem !important;
+        }
+
+        .p-3 {
+            padding: 1rem !important;
+        }
+
         #loading-spinner p {
             color: #007bff;
             font-size: 1.1em;
             font-weight: 500;
-        }
-
-        /* Heatmap styles */
-        .skill-bar {
-            margin-top: 6px;
-        }
-
-        .bar-wrap {
-            background: #e9ecef;
-            height: 10px;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .bar {
-            height: 10px;
-            border-radius: 5px;
         }
     </style>
 </head>
@@ -179,9 +180,8 @@
 <body>
     <div class="container">
         <a href="javascript:history.back()"
-            style="display: block; margin-bottom: 20px; color: #007bff; text-decoration: none;">
-            &larr; Επιστροφή στις Προτάσεις Πτυχίων
-        </a>
+            style="display: block; margin-bottom: 20px; color: #007bff; text-decoration: none;">&larr; Επιστροφή στις
+            Προτάσεις Πτυχίων</a>
 
         <div class="header-section">
             <p id="courses-header">Φόρτωση Πανεπιστημίου...</p>
@@ -193,7 +193,8 @@
             <p>Φόρτωση δεδομένων...</p>
         </div>
 
-        <ul id="course-recommendation-list"></ul>
+        <ul id="course-recommendation-list" style="padding: 0;">
+        </ul>
     </div>
 
     <script src="courses_script.js"></script>

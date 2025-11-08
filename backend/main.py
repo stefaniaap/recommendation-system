@@ -486,11 +486,17 @@ def get_similar(univ_id: int, top_n: int = 5, db: Session = Depends(get_db)):
     return {"target_university_id": univ_id, "similar_universities": similar_univs}
 
 
+
 @app.get("/recommend/degrees/{university_id}")
 def recommend_degrees(university_id: int, top_n: int = 5, db: Session = Depends(get_db)):
     recommender = UniversityRecommender(db)
     results = recommender.suggest_degrees_with_skills(university_id, top_n=top_n)
     return {"university_id": university_id, "recommended_degrees": results}
+
+
+
+
+
 
 
 @app.get("/recommendations/university/{univ_id}")

@@ -13,7 +13,7 @@
             --analyst-light-color: #c3e6cb;
             --secondary-color: #b0b0b0;
             --info-blue-color: #a0d8ef;
-            --sidebar-color: #3e4c59;
+            --sidebar-color: #34495e;
             --background-color: #fdfdfd;
             --card-background: #ffffff;
             --border-radius: 12px;
@@ -36,7 +36,7 @@
         .sidebar {
             width: 250px;
             background-color: var(--sidebar-color);
-            color: #f1f3f6;
+            color: #ecf0f1;
             padding: 20px;
             position: fixed;
             top: 0;
@@ -55,6 +55,10 @@
             width: 100%;
         }
 
+        .logo-section a {
+            text-decoration: none;
+        }
+
         .logo-placeholder {
             font-size: 2em;
             font-weight: 700;
@@ -63,15 +67,19 @@
         }
 
         .logo-placeholder span {
-            color: #f1f3f6;
+            color: #ecf0f1;
+        }
+
+        .sidebar nav {
+            width: 100%;
         }
 
         .sidebar nav a {
-            color: #f1f3f6;
+            color: #ecf0f1;
             text-decoration: none;
             padding: 10px 15px;
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             border-radius: 6px;
             transition: background-color 0.3s, color 0.3s;
             font-weight: 500;
@@ -82,7 +90,7 @@
             color: var(--primary-color);
         }
 
-        .sidebar nav a.active-role {
+        .sidebar nav a.active-landing {
             background-color: rgba(255, 255, 255, 0.1);
             color: white;
             font-weight: 600;
@@ -92,10 +100,6 @@
             padding-left: 35px !important;
             font-size: 0.9em !important;
             margin-top: -5px !important;
-        }
-
-        .submenu-item.active {
-            color: var(--primary-color);
         }
 
         /* ------------------ MAIN CONTENT ------------------ */
@@ -111,17 +115,14 @@
             width: 100%;
             max-width: 1100px;
             text-align: center;
-            /* Κεντρική στοίχιση του header */
         }
 
-        /* ------------------ PAGE HEADER ------------------ */
         .page-header {
             text-align: center;
-            /* Κεντρική στοίχιση */
             margin-bottom: 25px;
         }
 
-        .page-header h1 {
+        .page-header-title {
             color: #2c3e50;
             font-size: 2.2em;
             margin: 0 0 8px 0;
@@ -139,25 +140,18 @@
 
         #results-title {
             font-size: 1.2em;
-            margin-top: 15px;
+            margin-top: 25px;
             font-weight: 600;
             color: #3e4c59;
-            /* ΠΡΟΣΘΗΚΗ ΚΕΝΩΝ */
-            margin-top: 25px;
-            /* Κενό πάνω */
             margin-bottom: 15px;
-            /* Κενό κάτω */
         }
 
-        /* ΠΡΟΣΘΗΚΗ ΣΤΥΛ ΓΙΑ ΤΗΝ ΑΛΛΑΓΗ ΤΟΥ HEADER */
-        .page-header-title {
-            color: #2c3e50;
-            font-size: 2.2em;
-            margin: 0 0 8px 0;
-            font-weight: 700;
+        /* ✅ ΔΙΟΡΘΩΣΗ: αφαίρεση του εικονιδίου μπροστά από το κείμενο */
+        #university-info::before {
+            content: none !important;
+            display: none !important;
         }
 
-        /* ------------------ RECOMMENDATION CARDS ------------------ */
         #recommendation-list {
             list-style: none;
             padding: 0;
@@ -195,6 +189,7 @@
             font-size: 1.3em;
             color: #2c3e50;
             margin: 0;
+            word-break: break-word;
         }
 
         .degree-type {
@@ -225,8 +220,7 @@
             margin-top: 15px;
         }
 
-        .heatmap-section-full,
-        .course-list-section {
+        .heatmap-section-full {
             width: 100%;
             background-color: #f8fafc;
             padding: 20px;
@@ -234,8 +228,7 @@
             box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.04);
         }
 
-        .heatmap-section-full h5,
-        .course-list-section h5 {
+        .heatmap-section-full h5 {
             margin-top: 0;
             color: #555;
             font-size: 1.15em;
@@ -299,23 +292,6 @@
             transform: translateY(-2px);
         }
 
-        .recommend-courses-btn:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        .course-tag {
-            display: inline-block;
-            background-color: #e8f4fa;
-            color: #495057;
-            padding: 5px 10px;
-            margin: 4px;
-            border-radius: 6px;
-            font-size: 0.9em;
-            font-weight: 500;
-        }
-
         .spinner {
             display: block;
             width: 40px;
@@ -358,18 +334,32 @@
                 </div>
             </a>
         </div>
+
         <nav>
-            <a href="landing_page.html" class="active-landing"><i class="fas fa-home"></i> Home</a>
-            <a href="university_analysis.html"><i class="fas fa-chart-line"></i> Analyst Role</a>
-            <a href="results.html" class="submenu-item"><i class="fas fa-lightbulb"></i> New Degree Proposals</a>
-            <a href="courses.html" class="submenu-item"><i class="fas fa-graduation-cap"></i> Recommended Degree
-                Plan</a>
-            <a href="courses2.html" class="submenu-item"><i class="fas fa-layer-group"></i> Curriculum Enhancement</a>
-            <a href="student_search.html" style="margin-top: 20px;"><i class="fas fa-user-graduate"></i> Student
-                Role</a>
-            <a href="student_search.html" class="submenu-item"><i class="fas fa-compass"></i> Personalized
-                Recommendations</a>
-            <a href="students.html" class="submenu-item"><i class="fas fa-brain"></i> Degree-Based Recommendations</a>
+            <a href="landing_page.html">
+                <i class="fas fa-home"></i> Home
+            </a>
+            <a href="university_analysis.html">
+                <i class="fas fa-chart-line"></i> Analyst Role
+            </a>
+            <a href="results.html" class="submenu-item active-landing">
+                <i class="fas fa-lightbulb"></i> New Degree Proposals
+            </a>
+            <a href="courses.html" class="submenu-item">
+                <i class="fas fa-graduation-cap"></i> Recommended Degree Plan
+            </a>
+            <a href="courses2.html" class="submenu-item">
+                <i class="fas fa-layer-group"></i> Curriculum Enhancement
+            </a>
+            <a href="student_search.html" style="margin-top: 20px;">
+                <i class="fas fa-user-graduate"></i> Student Role
+            </a>
+            <a href="student_search.html" class="submenu-item">
+                <i class="fas fa-compass"></i> Personalized Recommendations
+            </a>
+            <a href="students.html" class="submenu-item">
+                <i class="fas fa-brain"></i> Degree-Based Recommendations
+            </a>
         </nav>
     </div>
 
@@ -383,13 +373,10 @@
                 <p id="results-title">Recommended Degrees for: Politecnico di Milano (Italy)</p>
                 <br>
             </div>
-
             <div id="loading-spinner" class="spinner" style="display:none;"></div>
-
             <ul id="recommendation-list"></ul>
         </div>
     </div>
-
     <script src="results_script.js"></script>
 </body>
 

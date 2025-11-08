@@ -1,4 +1,4 @@
-// results_script.js (ΤΕΛΙΚΗ & ΛΕΙΤΟΥΡΓΙΚΗ ΕΚΔΟΣΗ)
+// results_script.js (Ολοκληρωμένη & Λειτουργική Έκδοση)
 // =======================================================
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -7,12 +7,11 @@ const API_BASE_URL = 'http://127.0.0.1:8000';
 // 1. Βοηθητικές Συναρτήσεις 
 // =======================================================
 
-// Μετατροπή score σε πράσινο χρώμα (low -> light green, high -> dark green)
-// Στην συνάρτηση scoreToColor, παστέλ απόχρωση
+// Μετατροπή score σε χρωματιστό πράσινο bar (παστέλ)
 function scoreToColor(score) {
     const clampedScore = Math.max(0, Math.min(1, score));
-    const lowR = 223, lowG = 246, lowB = 228; // ανοιχτό παστέλ πράσινο
-    const highR = 91, highG = 184, highB = 92; // πιο σκούρο παστέλ πράσινο
+    const lowR = 223, lowG = 246, lowB = 228; // ανοιχτό πράσινο
+    const highR = 91, highG = 184, highB = 92; // σκούρο πράσινο
 
     const r = Math.round(lowR + (highR - lowR) * clampedScore);
     const g = Math.round(lowG + (highG - lowG) * clampedScore);
@@ -21,25 +20,29 @@ function scoreToColor(score) {
     return `rgb(${r}, ${g}, ${b})`;
 }
 
-// Στην generateSkillsHeatmap, τα bars θα χρησιμοποιούν τη συνάρτηση scoreToColor
-
-
-// Δημιουργία HTML για τις δεξιότητες με χρωματιστές μπάρες
+// Δημιουργία HTML για τις top skills με heatmap bars
 function generateSkillsHeatmap(topSkills) {
     if (!topSkills || topSkills.length === 0) {
-        return `<p style="color: #6c757d; font-size: 0.9em; margin-top: 5px;">Δε βρέθηκαν συσχετισμένες δεξιότητες.</p>`;
+        return `<p style="color: #6c757d; font-size: 0.9em; margin-top: 5px;">
+                  Δε βρέθηκαν συσχετισμένες δεξιότητες.</p>`;
     }
 
-    return topSkills.slice(0, 5).map(skill => {
-        const skillScore = skill.skill_score || 0; // Παίρνει το score ή 0 αν λείπει
-        const width = Math.round(skillScore * 100); // Πλάτος bar σε %
-        const barColor = scoreToColor(skillScore);  // Χρώμα bar
+    // Προσθήκη τίτλου "Top Skills"
+    let html = `
+        <div class="heatmap-section-full">
+            <h5><i class="fas fa-lightbulb"></i> Top Skills</h5>
+    `;
+
+    // Δημιουργία bars για κάθε skill
+    html += topSkills.slice(0, 5).map(skill => {
+        const skillScore = skill.skill_score || 0;
+        const width = Math.round(skillScore * 100);
+        const barColor = scoreToColor(skillScore);
 
         return `
             <div class="skill-bar">
-                <p>
-                    ${skill.skill_name} 
-                    <span style="font-weight: 600; color: ${barColor};">${width}%</span>
+                <p><strong>${skill.skill_name}</strong> 
+                   <span style="font-weight: 600; color: ${barColor};">${width}%</span>
                 </p>
                 <div class="bar-wrap">
                     <div class="bar" style="width: ${width}%; background-color: ${barColor};"></div>
@@ -47,30 +50,60 @@ function generateSkillsHeatmap(topSkills) {
             </div>
         `;
     }).join('');
+
+    html += `</div>`; // κλείσιμο heatmap-section-full
+    return html;
 }
 
 
-// =======================================================
-// 2. Συναρτήση: Χειρισμός Κλικ για ΝΕΑ ΣΕΛΙΔΑ
-// =======================================================
+// Δημιουργία metrics bars
+function generateMetricsBars(metrics) {
+    if (!metrics) return '';
+    return `
+        <div class="heatmap-section-full">
+            <h5><i class="fas fa-chart-pie"></i> Degree Metrics</h5>
+            <div class="skill-bar">
+                <p>Frequency <span>${metrics.frequency}%</span></p>
+                <div class="bar-wrap">
+                    <div class="bar" style="width:${metrics.frequency}%; background-color: var(--analyst-color);"></div>
+                </div>
+            </div>
+            <div class="skill-bar">
+                <p>Compatibility <span>${metrics.compatibility}%</span></p>
+                <div class="bar-wrap">
+                    <div class="bar" style="width:${metrics.compatibility}%; background-color: var(--primary-color);"></div>
+                </div>
+            </div>
+            <div class="skill-bar">
+                <p>Novelty <span>${metrics.novelty}%</span></p>
+                <div class="bar-wrap">
+                    <div class="bar" style="width:${metrics.novelty}%; background-color: var(--info-blue-color);"></div>
+                </div>
+            </div>
+            <div class="skill-bar">
+                <p>Skill Enrichment <span>${metrics.skill_enrichment}</span></p>
+                <div class="bar-wrap">
+                    <div class="bar" style="width:${Math.min(metrics.skill_enrichment * 20, 100)}%; background-color: var(--pastel-green);"></div>
+                </div>
+            </div>
+        </div>
+    `;
+}
 
+// =======================================================
+// 2. Event για κουμπί "Generate Course Recommendations"
+// =======================================================
 function handleRecommendCoursesClick(event) {
-    const button = event.target;
+    const button = event.target.closest('button');
     const universityId = button.getAttribute('data-univ-id');
     const degreeName = button.getAttribute('data-degree-name');
-
-    // Κωδικοποιούμε το όνομα του πτυχίου για να είναι ασφαλές στο URL
     const encodedDegreeName = encodeURIComponent(degreeName);
-
-    // Ανακατεύθυνση σε νέα σελίδα
     window.location.href = `courses.html?univ_id=${universityId}&degree_name=${encodedDegreeName}`;
 }
 
-
 // =======================================================
-// 3. displayRecommendations (ΔΙΟΡΘΩΜΕΝΗ)
+// 3. Εμφάνιση Συστάσεων (Recommendations)
 // =======================================================
-
 function displayRecommendations(recommendations, type, univId) {
     const resultsContainer = document.getElementById('recommendation-list');
     const titleElement = document.getElementById('results-title');
@@ -78,72 +111,35 @@ function displayRecommendations(recommendations, type, univId) {
 
     loadingSpinner.style.display = 'none';
 
-    // Ενημέρωση τίτλου για τον τύπο courses
-    let typeTitle = '';
-    if (type === 'degrees') {
-        typeTitle = 'Recommended Degrees for:';
-    } else if (type === 'courses') {
-        typeTitle = 'Recommended Degrees for:'; // Εμφανίζουμε τις προτάσεις νέων πτυχίων
-    }
-
-    // 🚨 Θωράκιση: Ελέγχουμε αν η recommendations είναι λίστα και έχει στοιχεία.
-    if (!recommendations || !Array.isArray(recommendations) || recommendations.length === 0 || (recommendations.length === 1 && recommendations[0].info)) {
-        // ΤΙΤΛΟΣ ΧΩΡΙΣ ΑΡΙΘΜΟ
+    if (!recommendations || !Array.isArray(recommendations) || recommendations.length === 0) {
         titleElement.textContent = `📊 No Results Found`;
-        resultsContainer.innerHTML = `<li style="color: #dc3545; padding: 20px; background: #fff; border-left: 8px solid #dc3545; font-size: 1.1em;">❌ Δεν βρέθηκαν νέες προτάσεις ${typeTitle} για αυτό το Πανεπιστήμιο.</li>`;
+        resultsContainer.innerHTML = `<li style="color: #dc3545; padding: 20px; background: #fff; border-left: 8px solid #dc3545; font-size: 1.1em;">
+            ❌ Δεν βρέθηκαν νέες προτάσεις ${type === 'degrees' ? 'πτυχίων' : 'courses'} για αυτό το Πανεπιστήμιο.
+        </li>`;
         return;
     }
 
     const htmlContent = recommendations.map((rec, index) => {
-        // Χρησιμοποιούμε degree_title για τις προτάσεις courses (νέα πτυχία)
         const itemName = rec.degree || rec.degree_title || rec.course_name || 'Άγνωστο Πρόγραμμα';
+        let score = rec.score ? rec.score.toFixed(3) : 'N/A';
+        let degreeType = rec.degree_type || 'BSc/BA';
+        let itemColor = scoreToColor(rec.score || 0);
+        let showButton = true;
 
-        let score, degreeType, itemColor;
-        let showButton = false;
-        let skillsHtml = '';
-        let coursesList = '';
-        let degreeTitleText = itemName;
+        let skillsHtml = generateSkillsHeatmap(rec.top_skills) + generateMetricsBars(rec.metrics);
 
-        if (type === 'degrees') {
-            // Λογική για suggest_degrees_with_skills
-            score = rec.score ? rec.score.toFixed(3) : 'N/A';
-            degreeType = rec.degree_type || 'BSc/BA';
-            itemColor = scoreToColor(rec.score || 0); // Χρήση της συνάρτησης scoreToColor
-            showButton = true;
-            skillsHtml = generateSkillsHeatmap(rec.top_skills);
-            degreeTitleText = itemName;
-
-        } else if (type === 'courses') {
-            // Λογική για suggest_new_degree_proposals (από recommend/university)
-            const topCourses = rec.suggested_courses ? rec.suggested_courses.slice(0, 5) : [];
-            degreeType = 'Proposal';
-            score = 'N/A';
-            itemColor = '#17a2b8'; // Χρώμα του κουμπιού για να ξεχωρίζει
-            showButton = true;
-
-            coursesList = topCourses.map(c =>
-                `<span class="course-tag">${c.course} (${c.freq})</span>`
-            ).join('');
-            degreeTitleText = `${itemName} (New Program Proposal)`;
-        }
-
-
-        let degreeSpecificContent = '';
-        if (showButton) {
-            degreeSpecificContent = `
+        return `
+            <li class="recommendation-item recommendation-card" style="border-left-color: ${itemColor};">
+                <div class="card-header">
+                    <div class="degree-info">
+                        <h4 class="degree-name">${itemName} <span class="degree-type">[${degreeType}]</span></h4>
+                    </div>
+                    <div class="score-badge" style="background-color: ${itemColor};">
+                        ${type === 'courses' ? 'Proposal' : `Score: ${score}`}
+                    </div>
+                </div>
                 <div class="card-content-full-width">
-                    
-                    ${type === 'degrees' ?
-                    `<div class="heatmap-section-full">
-                                <h5><i class="fas fa-chart-bar"></i> Top Associated Skills</h5>
-                                ${skillsHtml}
-                            </div>` :
-                    `<div class="course-list-section">
-                                <h5><i class="fas fa-tags"></i> Suggested Core Courses</h5>
-                                <div class="course-tags-wrapper">${coursesList}</div>
-                            </div>`
-                }
-
+                    ${skillsHtml}
                     <div class="action-section-centered">
                         <button class="recommend-courses-btn green-btn" 
                                 data-degree-name="${itemName}"
@@ -152,43 +148,21 @@ function displayRecommendations(recommendations, type, univId) {
                         </button>
                     </div>
                 </div>
-            `;
-        }
-
-
-        return `
-            <li class="recommendation-item recommendation-card" style="border-left-color: ${itemColor};">
-                <div class="card-header">
-                    <div class="degree-info">
-                        <h4 class="degree-name">${degreeTitleText} <span class="degree-type">[${degreeType}]</span></h4>
-                    </div>
-                    
-                    <div class="score-badge" style="background-color: ${itemColor};">
-                        ${type === 'courses' ? 'Proposal' : `Score: ${score}`}
-                    </div>
-                </div>
-                
-                ${degreeSpecificContent}
-
             </li>
         `;
     }).join('');
 
-    // ΑΛΛΑΓΗ 2: Χρήση του "Recommended Degrees for:"
-    titleElement.textContent = `📊 ${type === 'degrees' ? 'Recommended Degrees for:' : 'Recommended Degrees for:'}`;
     resultsContainer.innerHTML = htmlContent;
 
-    // ΠΡΟΣΘΗΚΗ EVENT LISTENERS ΓΙΑ ΤΟ ΝΕΟ ΚΛΙΚ
+    // Event listeners για κουμπιά
     document.querySelectorAll('.recommend-courses-btn').forEach(button => {
         button.addEventListener('click', handleRecommendCoursesClick);
     });
 }
 
-
 // =======================================================
-// 4. Κύρια Συνάρτηση: loadRecommendations 
+// 4. Κύρια Συνάρτηση: loadRecommendations
 // =======================================================
-
 async function loadRecommendations() {
     const params = new URLSearchParams(window.location.search);
     const univId = params.get('univ_id');
@@ -198,41 +172,32 @@ async function loadRecommendations() {
     const titleElement = document.getElementById('results-title');
     const loadingSpinner = document.getElementById('loading-spinner');
 
-    // Εμφάνιση Spinner στην αρχή
     loadingSpinner.style.display = 'block';
 
     if (!univId || !type) {
-        infoElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error: University ID or Recommendation Type not found in URL.`;
+        infoElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error: University ID or Recommendation Type missing.`;
         loadingSpinner.style.display = 'none';
         return;
     }
 
-    // 1. Βρίσκουμε το όνομα του πανεπιστημίου για τον τίτλο
     let univName = `University ID: ${univId}`;
     try {
         const univsResponse = await fetch(`${API_BASE_URL}/universities`);
         const universities = await univsResponse.json();
         const selectedUniv = universities.find(u => String(u.university_id) === univId);
-        if (selectedUniv) {
-            univName = `${selectedUniv.university_name} (${selectedUniv.country})`;
-        }
+        if (selectedUniv) univName = `${selectedUniv.university_name} (${selectedUniv.country})`;
     } catch (e) {
         console.error("Could not fetch university name:", e);
     }
 
-    // Ενημέρωση πληροφοριών (Χρήση εικονιδίων για πιο επαγγελματική εμφάνιση)
-    // ΑΛΛΑΓΗ 1: Αφαίρεση του "Results for:" από εδώ και προσθήκη <br><br> για κενό
     infoElement.innerHTML = `<i class="fas fa-info-circle"></i> Find the best programs and courses based on your profile.`;
-    titleElement.textContent = `Recommended Degrees for: ${univName}`; // Χρήση του νέου τίτλου
+    titleElement.textContent = `Recommended Degrees for: ${univName}`;
 
-    // 2. Εκτελούμε την κλήση API ανάλογα με τον τύπο
     let endpoint = '';
-    if (type === 'degrees') {
-        endpoint = `${API_BASE_URL}/recommend/degrees/${univId}`;
-    } else if (type === 'courses') {
-        endpoint = `${API_BASE_URL}/recommendations/university/${univId}`;
-    } else {
-        infoElement.textContent = "Άγνωστος τύπος σύστασης.";
+    if (type === 'degrees') endpoint = `${API_BASE_URL}/recommend/degrees/${univId}`;
+    else if (type === 'courses') endpoint = `${API_BASE_URL}/recommendations/university/${univId}`;
+    else {
+        infoElement.textContent = "Unknown recommendation type.";
         loadingSpinner.style.display = 'none';
         return;
     }
@@ -240,44 +205,30 @@ async function loadRecommendations() {
     try {
         const response = await fetch(endpoint);
         if (!response.ok) {
-            // Χειρισμός σφάλματος HTTP
             let errorDetail = await response.text();
-            try {
-                const errorJson = JSON.parse(errorDetail);
-                errorDetail = errorJson.detail || errorDetail;
-            } catch (e) {
-                // ignore
-            }
-            throw new Error(`HTTP error! Status: ${response.status}. Detail: ${errorDetail}`);
+            try { errorDetail = JSON.parse(errorDetail).detail || errorDetail; } catch (e) { }
+            throw new Error(`HTTP ${response.status}: ${errorDetail}`);
         }
 
         const data = await response.json();
         let recommendations = [];
+        if (type === 'degrees') recommendations = data.recommended_degrees || [];
+        else if (type === 'courses') recommendations = (data.recommendations?.new_degree_proposals) || [];
 
-        if (type === 'degrees') {
-            // ΔΙΟΡΘΩΣΗ: Θωράκιση - αν λείπει το recommended_degrees, παίρνουμε κενή λίστα.
-            recommendations = data.recommended_degrees || [];
-        } else if (type === 'courses') {
-            // ΔΙΟΡΘΩΣΗ: Θωράκιση - αν λείπει το data.recommendations ή new_degree_proposals, παίρνουμε κενή λίστα.
-            recommendations = (data.recommendations && data.recommendations.new_degree_proposals) || [];
-        }
-
-        // Η κλήση είναι τώρα ασφαλής, καθώς το recommendations είναι πάντα Array
         displayRecommendations(recommendations, type, univId);
 
     } catch (error) {
-        console.error(`Σφάλμα φόρτωσης ${type} συστάσεων:`, error);
+        console.error(`Error loading ${type} recommendations:`, error);
         loadingSpinner.style.display = 'none';
         titleElement.textContent = `❌ Error Loading Results`;
         document.getElementById('recommendation-list').innerHTML =
             `<li style="color: #dc3545; padding: 20px; background: #fff; border-left: 8px solid #dc3545; font-size: 1.1em;">
-                <i class="fas fa-server"></i> Αποτυχία φόρτωσης δεδομένων: ${error.message}. Ελέγξτε αν ο FastAPI server τρέχει.
+                <i class="fas fa-server"></i> Failed to load data: ${error.message}. Ensure FastAPI server is running.
             </li>`;
     } finally {
-        // Τέλος φόρτωσης
         loadingSpinner.style.display = 'none';
     }
 }
 
-// Εκκίνηση της διαδικασίας με τη φόρτωση της σελίδας
+// Εκκίνηση φόρτωσης με το DOMContentLoaded
 document.addEventListener('DOMContentLoaded', loadRecommendations);
