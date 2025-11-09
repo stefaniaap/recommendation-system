@@ -28,7 +28,7 @@ function displayCourseRecommendations(courses, degreeName) {
     const loadingSpinner = document.getElementById('loading-spinner');
 
     if (loadingSpinner) loadingSpinner.style.display = 'none';
-    if (titleElement) titleElement.textContent = `📚 Προτεινόμενα Μαθήματα για το: ${decodeURIComponent(degreeName)}`;
+    if (titleElement) titleElement.textContent = `📚 Recommended Courses for: ${decodeURIComponent(degreeName)}`;
 
     if (!resultsContainer) {
         console.error("Κρίσιμο Σφάλμα: Missing #course-recommendation-list.");
