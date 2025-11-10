@@ -380,12 +380,14 @@
                 data.recommended_electives.forEach(course => {
                     const card = document.createElement("div");
                     card.innerHTML = `
-                        <h3>${course.lesson_name}</h3>
-                        <p><strong>Score:</strong> ${course.score}</p>
-                        ${course.skills?.length ? `<p><strong>Δεξιότητες:</strong> ${course.skills.join(', ')}</p>` : ''}
-                    `;
+        <h3>${course.course_name}</h3>
+        <p><strong>Score:</strong> ${course.score}</p>
+        ${course.skills?.length ? `<p><strong>Δεξιότητες:</strong> ${course.skills.join(', ')}</p>` : ''}
+        ${course.matching_skills?.length ? `<p><strong>Συμβατές δεξιότητες:</strong> ${course.matching_skills.join(', ')}</p>` : ''}
+    `;
                     resultsContainer.appendChild(card);
                 });
+
             } catch (err) {
                 console.error(err);
                 resultsContainer.innerHTML = "<p style='color:red;'>Σφάλμα κατά την ανάκτηση συστάσεων.</p>";
