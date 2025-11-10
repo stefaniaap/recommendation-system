@@ -1,16 +1,13 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edu Recommender - Course Recommendations</title>
+    <title>Edu Recommender - Course Recommendations with Skills Heatmap</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* ---------------------------
-           CSS Variables / Theme Colors
-        --------------------------- */
         :root {
             --primary-color: #6a9bd8;
             --analyst-color: #79c792;
@@ -24,9 +21,6 @@
             --active-sidebar-text: white;
         }
 
-        /* ---------------------------
-           LAYOUT STRUCTURE
-        --------------------------- */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--background-color);
@@ -36,9 +30,6 @@
             color: #333;
         }
 
-        /* ---------------------------
-           SIDEBAR STYLING
-        --------------------------- */
         .sidebar {
             width: 250px;
             background-color: var(--sidebar-color);
@@ -54,18 +45,14 @@
 
         .back-button {
             color: #79c792;
-            /* pastel green */
             text-decoration: none;
-            /* χωρίς underline */
             font-weight: 500;
             transition: color 0.3s ease;
         }
 
         .back-button:hover {
             color: #6ab785;
-            /* πιο σκούρο pastel green στο hover */
         }
-
 
         .logo-section {
             padding-bottom: 25px;
@@ -121,9 +108,6 @@
             margin-top: -5px !important;
         }
 
-        /* ---------------------------
-           MAIN CONTENT AREA
-        --------------------------- */
         .main-content {
             margin-left: 250px;
             flex-grow: 1;
@@ -131,7 +115,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 950px;
             margin: 0 auto;
             background-color: var(--card-background);
             padding: 30px;
@@ -139,9 +123,6 @@
             box-shadow: var(--shadow);
         }
 
-        /* ---------------------------
-           HEADER + TITLES
-        --------------------------- */
         .header-section {
             padding: 15px;
             background-color: #f8f9fa;
@@ -154,26 +135,18 @@
             color: #6c757d;
             margin-bottom: 5px;
             text-align: center;
-            /* Προσθήκη για κεντρική στοίχιση */
         }
-
 
         #courses-title {
             color: #79c792;
-            /* pastel green */
             margin-bottom: 25px;
             border-bottom: 3px solid #79c792;
             padding-bottom: 10px;
             font-size: 1.8em;
             font-weight: 600;
             text-align: center;
-            /* center alignment */
         }
 
-
-        /* ---------------------------
-           COURSE CARD LIST
-        --------------------------- */
         #course-recommendation-list {
             padding: 0;
             list-style: none;
@@ -216,9 +189,6 @@
             font-size: 0.9em;
         }
 
-        /* ---------------------------
-           INFO SECTIONS
-        --------------------------- */
         .info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -248,44 +218,30 @@
             border: 1px solid #cce5ff;
         }
 
-        .section-title {
-            color: #0056b3;
-            border-bottom: 1px solid #cce5ff;
-            padding-bottom: 5px;
-            margin-bottom: 15px;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: .35em .65em;
-            font-size: .75em;
-            font-weight: 700;
-            color: #fff;
-            border-radius: .25rem;
-            margin-right: 5px;
-        }
-
-        .bg-success {
-            background-color: #198754 !important;
-        }
-
-        .bg-info {
-            background-color: #0dcaf0 !important;
-            color: #000 !important;
-        }
-
         #loading-spinner p {
             color: #007bff;
             font-size: 1.1em;
             font-weight: 500;
         }
+
+        .chart-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 20px auto;
+        }
+
+        .chart-title {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #007bff;
+            margin-top: 40px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 
 <body>
-    <!-- ---------------------------
-         SIDEBAR
-    --------------------------- -->
     <div class="sidebar">
         <div class="logo-section">
             <a href="landing_page.html">
@@ -294,23 +250,17 @@
                 </div>
             </a>
         </div>
-
         <nav>
-            <a href="landing_page.html">
-                <i class="fas fa-home"></i> Home
-            </a>
-            <a href="university_analysis.html">
-                <i class="fas fa-chart-line"></i> Analyst Role
-            </a>
-            <a href="results.html" class="submenu-item">
-                <i class="fas fa-lightbulb"></i> New Degree Proposals
-            </a>
-            <a href="courses.html" class="submenu-item active-landing">
-                <i class="fas fa-graduation-cap"></i> Recommended Degree Plan
-            </a>
+            <a href="landing_page.html"><i class="fas fa-home"></i> Home</a>
+            <a href="university_analysis.html"><i class="fas fa-chart-line"></i> Analyst Role</a>
+            <a href="results.html" class="submenu-item"><i class="fas fa-lightbulb"></i> New Degree Proposals</a>
+            <a href="courses_with_skills_chart.html" class="submenu-item active-landing"><i
+                    class="fas fa-graduation-cap"></i> Recommended Degree Plan</a>
             <a href="courses2.html" class="submenu-item">
                 <i class="fas fa-layer-group"></i> Curriculum Enhancement
             </a>
+
+            <!-- Student Role Section -->
             <a href="student_search.html" style="margin-top: 20px;">
                 <i class="fas fa-user-graduate"></i> Student Role
             </a>
@@ -323,32 +273,188 @@
         </nav>
     </div>
 
-    <!-- ---------------------------
-         MAIN CONTENT
-    --------------------------- -->
     <div class="main-content">
         <div class="container">
-            <a href="javascript:history.back()" class="back-button">
-                ⬅ Back to Degree Recommendations
-            </a>
-
-
-
+            <a href="javascript:history.back()" class="back-button">⬅ Back to Degree Recommendations</a>
             <div class="header-section">
-                <p id="courses-header">Φόρτωση Πανεπιστημίου...</p>
+                <p id="courses-header">Loading University...</p>
             </div>
-
-            <h2 id="courses-title">Φόρτωση Προτάσεων Μαθημάτων...</h2>
-
+            <h2 id="courses-title">Loading Course Recommendations...</h2>
             <div id="loading-spinner" style="text-align: center; margin: 50px 0;">
-                <p>Φόρτωση δεδομένων...</p>
+                <p>Loading data...</p>
             </div>
 
             <ul id="course-recommendation-list"></ul>
+
+            <div id="heatmap-section">
+                <div class="chart-title">💡 Skills Heatmap per Course</div>
+                <div class="chart-container">
+                    <canvas id="skillsHeatmapChart"></canvas>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <script src="courses_script.js"></script>
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+
+        function scoreToCourseColor(score) {
+            const clampedScore = Math.max(0, Math.min(1, score));
+            const lowR = 198, lowG = 226, lowB = 189;
+            const highR = 40, highG = 167, highB = 69;
+            const r = Math.round(lowR + (highR - lowR) * clampedScore);
+            const g = Math.round(lowG + (highG - lowG) * clampedScore);
+            const b = Math.round(lowB + (highB - lowB) * clampedScore);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function displayCourseHeatmap(courses) {
+            const allSkills = Array.from(new Set(courses.flatMap(c => [...(c.new_skills || []), ...(c.compatible_skills || [])])));
+            const labels = courses.map(c => c.course_name || 'Unknown Course');
+
+            const datasets = allSkills.map(skill => ({
+                label: skill,
+                data: courses.map(course => 1),
+                backgroundColor: courses.map(course => {
+                    if ((course.new_skills || []).includes(skill)) return 'rgba(25, 135, 84, 0.8)';
+                    if ((course.compatible_skills || []).includes(skill)) return 'rgba(13, 202, 240, 0.8)';
+                    return 'rgba(220,220,220,0.3)';
+                }),
+                borderWidth: 0,
+                barThickness: 12
+            }));
+
+            const ctx = document.getElementById('skillsHeatmapChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const color = context.dataset.backgroundColor[context.dataIndex];
+                                    if (color.includes('25, 135, 84')) return context.dataset.label + ': New Skill';
+                                    if (color.includes('13, 202, 240')) return context.dataset.label + ': Compatible Skill';
+                                    return context.dataset.label + ': -';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, display: false },
+                        y: { stacked: true }
+                    }
+                }
+            });
+        }
+
+        function displayCourseRecommendations(courses, degreeName) {
+            const resultsContainer = document.getElementById('course-recommendation-list');
+            const titleElement = document.getElementById('courses-title');
+            const loadingSpinner = document.getElementById('loading-spinner');
+
+            if (loadingSpinner) loadingSpinner.style.display = 'none';
+            titleElement.textContent = `📚 Recommended Courses for: ${decodeURIComponent(degreeName)}`;
+
+            if (!courses || courses.length === 0) {
+                resultsContainer.innerHTML = `<li class="course-card" style="border-left-color: #dc3545;">❌ No recommended courses found.</li>`;
+                return;
+            }
+
+            let htmlContent = '';
+            courses.forEach(course => {
+                const score = course.score ? course.score.toFixed(3) : 'N/A';
+                const color = scoreToCourseColor(course.score || 0);
+                const description = course.description || 'Not available.';
+                const objectives = course.objectives || 'Not available.';
+                const learning_outcomes = course.learning_outcomes || 'Not available.';
+                const course_content = course.course_content || 'Not available.';
+
+                htmlContent += `
+                    <li class="course-card" style="border-left-color: ${color};">
+                        <div class="card-header">
+                            <p class="course-name">${course.course_name || 'Unknown Course'}</p>
+                            <div class="score-badge" style="background-color: ${color};">Score: ${score}</div>
+                        </div>
+                        <div class="info-grid mt-3">
+                            <div class="info-item"><h6>🎯 Objectives</h6><p>${objectives.substring(0, 150)}...</p></div>
+                            <div class="info-item"><h6>💡 Learning Outcomes</h6><p>${learning_outcomes.substring(0, 150)}...</p></div>
+                        </div>
+                        <div class="info-section mt-3 p-3" style="border: 1px dashed #ced4da; background-color: #f7f7f7;">
+                            <h6>🌐 Description Summary</h6>
+                            <p style="font-size: 0.85em;">${description.substring(0, 200)}...</p>
+                            <details>
+                                <summary style="cursor:pointer;color:#007bff;font-weight:500;margin-top:10px;">Full Details</summary>
+                                <h6 class="mt-2">Full Description</h6><p style="font-size:0.8em;">${description}</p>
+                                <h6 class="mt-2">Course Content</h6><p style="font-size:0.8em;">${course_content}</p>
+                            </details>
+                        </div>
+                    </li>
+                `;
+            });
+
+            resultsContainer.innerHTML = htmlContent;
+            displayCourseHeatmap(courses);
+        }
+
+        async function fetchAndDisplayRecommendations() {
+            const headerElement = document.getElementById('courses-header');
+            const titleElement = document.getElementById('courses-title');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const listElement = document.getElementById('course-recommendation-list');
+
+            const params = new URLSearchParams(window.location.search);
+            const univId = params.get('univ_id');
+            const degreeName = params.get('degree_name');
+
+            if (!univId || !degreeName) {
+                headerElement.textContent = `Error: URL data missing.`;
+                titleElement.textContent = "";
+                loadingSpinner.style.display = 'none';
+                return;
+            }
+
+            const decodedDegreeName = decodeURIComponent(degreeName);
+            let univName = `University ID: ${univId}`;
+
+            try {
+                const univsResponse = await fetch(`${API_BASE_URL}/universities`);
+                if (univsResponse.ok) {
+                    const universities = await univsResponse.json();
+                    const targetUniv = universities.find(u => String(u.university_id) === univId);
+                    if (targetUniv) univName = targetUniv.university_name;
+                }
+            } catch (error) {
+                console.warn("Could not fetch university name:", error);
+            }
+
+            headerElement.textContent = `University: ${univName}`;
+            titleElement.textContent = `Loading Courses for ${decodedDegreeName}...`;
+            loadingSpinner.style.display = 'block';
+
+            const endpoint = `${API_BASE_URL}/recommend/courses/${univId}/${encodeURIComponent(degreeName)}`;
+            console.log("Calling API URL:", endpoint);
+
+            try {
+                const response = await fetch(endpoint);
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                const data = await response.json();
+                const recommendations = data.recommendations || [];
+                displayCourseRecommendations(recommendations, degreeName);
+            } catch (error) {
+                console.error("Error loading recommended courses:", error);
+                loadingSpinner.style.display = 'none';
+                listElement.innerHTML = `<li class="course-card" style="border-left-color: #dc3545;">Failed to load data: ${error.message}</li>`;
+            }
+        }
+
+        fetchAndDisplayRecommendations();
+    </script>
 </body>
 
 </html>

@@ -638,4 +638,185 @@ def get_degree_programs_by_university(university_id: int, db: Session = Depends(
         for p in programs
     ]
 
+from fastapi import HTTPException, Depends
+from sqlalchemy.orm import Session
+from typing import List
+from backend.models import University
+from backend.database import get_db
+from pydantic import BaseModel
 
+class DegreeProgramOut(BaseModel):
+    program_id: int
+    degree_type: str
+    degree_titles: list | None
+    language: str | None
+    duration_semesters: str | None
+    total_ects: str | None
+
+    class Config:
+        orm_mode = True
+
+@app.get("/universities/{univ_id}/degrees", response_model=List[DegreeProgramOut])
+def get_degree_programs(univ_id: int, db: Session = Depends(get_db)):
+    university = db.query(University).filter(University.university_id == univ_id).first()
+    if not university:
+        raise HTTPException(status_code=404, detail="University not found")
+
+    return university.programs
+from fastapi import Body
+
+class ElectiveRecommendationRequest(BaseModel):
+    program_id: int = Field(..., description="Το ID του πτυχίου για το οποίο ζητάμε προτάσεις μαθημάτων επιλογής")
+    target_skills: List[str] = Field(..., description="Δεξιότητες που θέλει να αναπτύξει ο χρήστης")
+    top_n: int = Field(10, description="Πόσα κορυφαία μαθήματα να επιστραφούν")
+
+# ==============================
+# Endpoint για προτεινόμενα electives
+# ==============================
+from fastapi import HTTPException, Depends
+from sqlalchemy.orm import Session
+from typing import List
+from backend.models import University
+from backend.database import get_db
+from pydantic import BaseModel
+
+class DegreeProgramOut(BaseModel):
+    program_id: int
+    degree_type: str
+    degree_titles: list | None
+    language: str | None
+    duration_semesters: str | None
+    total_ects: str | None
+
+    class Config:
+        orm_mode = True
+
+@app.get("/universities/{univ_id}/degrees", response_model=List[DegreeProgramOut])
+def get_degree_programs(univ_id: int, db: Session = Depends(get_db)):
+    university = db.query(University).filter(University.university_id == univ_id).first()
+    if not university:
+        raise HTTPException(status_code=404, detail="University not found")
+
+    return university.programs
+from fastapi import Body
+
+class ElectiveRecommendationRequest(BaseModel):
+    program_id: int = Field(..., description="Το ID του πτυχίου για το οποίο ζητάμε προτάσεις μαθημάτων επιλογής")
+    target_skills: List[str] = Field(..., description="Δεξιότητες που θέλει να αναπτύξει ο χρήστης")
+    top_n: int = Field(10, description="Πόσα κορυφαία μαθήματα να επιστραφούν")
+
+# ==============================
+# Endpoint για προτεινόμενα electives
+# ==============================
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+from backend.core3 import CourseRecommenderV4
+from backend.database import get_db
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+from pydantic import BaseModel
+from backend.core3 import CourseRecommenderV4
+from backend.database import get_db
+
+router = APIRouter()
+
+class ElectiveRecommendationRequest(BaseModel):
+    program_id: int
+    target_skills: List[str]
+    top_n: int = 10
+
+@router.post("/universities/{univ_id}/degrees/electives")
+def recommend_electives(
+    univ_id: int,
+    payload: ElectiveRecommendationRequest,
+    min_overlap_ratio: float = 0.0,
+    db: Session = Depends(get_db)
+):
+    try:
+        recommender = CourseRecommenderV4(db)
+        
+        # Κλήση στο recommender
+        result = recommender.recommend_electives_for_degree_enhanced(
+            univ_id=univ_id,
+            program_id=payload.program_id,
+            target_skills=payload.target_skills,
+            top_n=payload.top_n,
+            min_overlap_ratio=min_overlap_ratio
+        )
+
+        # Αν δεν υπάρχει αποτέλεσμα ή επιστρέφει μήνυμα σφάλματος
+        if not result or "message" in result:
+            return {
+                "success": False,
+                "message": result.get("message", "Δεν βρέθηκαν διαθέσιμα electives για αυτό το πρόγραμμα."),
+                "recommended_electives": []
+            }
+
+        # Διασφάλιση ότι κάθε course έχει score
+        recommended_courses = []
+        for item in result.get("recommended_electives", []):
+            recommended_courses.append({
+                "course_name": item.get("course", "Unknown"),
+                "score": float(item.get("score", 0.0)),  # default 0.0 αν δεν υπάρχει
+                "description": item.get("description", ""),
+                "objectives": item.get("objectives", ""),
+                "learning_outcomes": item.get("learning_outcomes", ""),
+                "course_content": item.get("course_content", ""),
+                "new_skills": sorted(item.get("new_skills", [])),
+                "compatible_skills": sorted(item.get("compatible_skills", [])),
+            })
+
+        return {
+            "success": True,
+            "recommended_electives": recommended_courses,
+            "meta": result.get("meta", {})
+        }
+
+    except Exception as e:
+        # Logging για debugging
+        print(f"Error in recommend_electives endpoint: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+
+# ==============================
+# Endpoint για δεξιότητες από μαθήματα επιλογής συγκεκριμένου πτυχίου
+# ==============================
+@app.get("/universities/{univ_id}/degrees/{program_id}/elective-skills", summary="Δεξιότητες από μαθήματα επιλογής συγκεκριμένου πτυχίου")
+def get_elective_skills_for_program(
+    univ_id: int,
+    program_id: int,
+    db: Session = Depends(get_db)
+):
+    try:
+        program = db.query(DegreeProgram).filter(
+            DegreeProgram.program_id == program_id,
+            DegreeProgram.university_id == univ_id
+        ).first()
+        if not program:
+            raise HTTPException(status_code=404, detail="Δεν βρέθηκε το πρόγραμμα σπουδών για αυτό το πανεπιστήμιο.")
+
+        elective_courses = [c for c in program.courses if getattr(c, "mand_opt_list", None)]
+        if not elective_courses:
+            return {"skills": []}
+
+        skill_ids = set()
+        for course in elective_courses:
+            for cs in getattr(course, "skills", []):
+                skill_ids.add(cs.skill_id)
+
+        if not skill_ids:
+            return {"skills": []}
+
+        skills = db.query(Skill).filter(Skill.skill_id.in_(skill_ids)).order_by(Skill.skill_name.asc()).all()
+        skill_list = [{"skill_id": s.skill_id, "skill_name": s.skill_name} for s in skills]
+
+        return {"skills": skill_list}
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error in get_elective_skills_for_program: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+        

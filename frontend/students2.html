@@ -163,47 +163,8 @@
             border: 1px solid #dee2e6;
             border-radius: 8px;
             overflow: hidden;
-        }
-
-        .skill-category {
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .skill-category:last-child {
-            border-bottom: none;
-        }
-
-        .category-header {
-            background-color: var(--skill-header-bg);
-            padding: 15px 20px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: #343a40;
-            transition: background-color 0.2s;
-        }
-
-        .category-header:hover {
-            background-color: #dde1e5;
-        }
-
-        .category-header i {
-            transition: transform 0.3s ease;
-        }
-
-        .category-header.active i {
-            transform: rotate(180deg);
-        }
-
-        .category-content {
-            padding: 15px 20px;
-            display: none;
-            background-color: #ffffff;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 10px;
+            padding: 15px;
+            background: #fff;
         }
 
         .category-content label {
@@ -246,6 +207,14 @@
             transform: translateY(-1.5px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         }
+
+        #resultsContainer div {
+            background: #fff;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 
@@ -259,7 +228,6 @@
                 </div>
             </a>
         </div>
-
         <nav>
             <a href="landing_page.html"><i class="fas fa-home"></i> Home</a>
             <a href="university_analysis.html"><i class="fas fa-chart-line"></i> Analyst Role</a>
@@ -279,7 +247,7 @@
     <div class="main-content">
         <div class="page-title">
             <h1>University & Program Finder</h1>
-            <p>Search programs based on skills and universities</p>
+            <p>Search elective courses based on skills</p>
         </div>
 
         <div class="filter-card">
@@ -300,11 +268,15 @@
             </div>
 
             <h3><i class="fas fa-cogs"></i> Select Skills</h3>
-            <div id="skillsContainer"></div>
+            <div id="skillsContainer">
+                <p>Επιλέξτε πανεπιστήμιο και πρόγραμμα πρώτα.</p>
+            </div>
 
             <div class="button-group">
-                <button id="searchBtn"><i class="fas fa-search"></i> Search / Suggest</button>
+                <button id="searchBtn"><i class="fas fa-search"></i> Suggest Electives</button>
             </div>
+
+            <div id="resultsContainer" style="margin-top:30px;"></div>
         </div>
     </div>
 
@@ -318,58 +290,116 @@
             data.forEach(u => select.appendChild(new Option(u.university_name, u.university_id)));
         }
 
-        async function loadPrograms(universityId) {
-            const select = document.getElementById("program");
-            select.innerHTML = '<option value="">-- Select Program --</option>';
-            if (!universityId) return;
-            const res = await fetch(`${API_BASE}/degree-programs/${universityId}`);
-            const data = await res.json();
-            data.forEach(p => select.appendChild(new Option(p.degree_title, p.program_id)));
+        async function loadPrograms(univId) {
+            const dropdown = document.getElementById('program');
+            dropdown.innerHTML = '<option value="">-- Select Program --</option>';
+            if (!univId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/universities/${univId}/degrees`);
+                const degrees = await response.json();
+                degrees.forEach(degree => {
+                    const option = document.createElement('option');
+                    option.value = degree.program_id;
+                    option.textContent = `${degree.degree_type}: ${Array.isArray(degree.degree_titles) ? degree.degree_titles.join(', ') : ''}`;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Error loading degrees:", error);
+            }
         }
 
-        async function loadSkills() {
-            const res = await fetch(`${API_BASE}/skills/grouped-by-categories`);
-            const data = await res.json();
+        async function loadElectiveSkills(univId, programId) {
             const container = document.getElementById("skillsContainer");
-            container.innerHTML = "";
-            Object.keys(data).forEach(cat => {
-                const catDiv = document.createElement("div");
-                catDiv.className = "skill-category";
-                const header = document.createElement("div");
-                header.className = "category-header";
-                header.innerHTML = `<span>${cat.toUpperCase()}</span><i class="fas fa-chevron-down"></i>`;
+            container.innerHTML = "<p>Φόρτωση δεξιοτήτων...</p>";
+
+            if (!univId || !programId) {
+                container.innerHTML = "<p>Επιλέξτε πανεπιστήμιο και πρόγραμμα πρώτα.</p>";
+                return;
+            }
+
+            // ✅ Debug log για να βλέπουμε τι στέλνουμε
+            console.log("Fetching elective skills for university:", univId, "program:", programId);
+
+            try {
+                const res = await fetch(`${API_BASE}/universities/${univId}/degrees/${programId}/elective-skills`);
+                if (!res.ok) {
+                    console.error(`Fetch returned status ${res.status}`);
+                    container.innerHTML = `<p style="color:red;">Σφάλμα ${res.status}: Δεν βρέθηκαν δεξιότητες.</p>`;
+                    return;
+                }
+                const data = await res.json();
+                container.innerHTML = "";
+
+                if (!data.skills || data.skills.length === 0) {
+                    container.innerHTML = "<p>Δεν υπάρχουν δεξιότητες για το πρόγραμμα.</p>";
+                    return;
+                }
+
                 const content = document.createElement("div");
                 content.className = "category-content";
-                data[cat].forEach(skill => {
+                data.skills.forEach(skill => {
                     const label = document.createElement("label");
-                    label.innerHTML = `<input type="checkbox" value="${skill.id}" data-skill-name="${skill.name}"> ${skill.name}`;
+                    label.innerHTML = `<input type="checkbox" value="${skill.skill_id}" data-skill-name="${skill.skill_name}"> ${skill.skill_name}`;
                     content.appendChild(label);
                 });
-                header.addEventListener("click", () => {
-                    const visible = content.style.display === "grid";
-                    content.style.display = visible ? "none" : "grid";
-                    header.classList.toggle("active", !visible);
-                });
-                catDiv.appendChild(header);
-                catDiv.appendChild(content);
-                container.appendChild(catDiv);
-            });
+                container.appendChild(content);
+            } catch (err) {
+                console.error("Error loading elective skills:", err);
+                container.innerHTML = "<p style='color:red;'>Σφάλμα κατά τη φόρτωση δεξιοτήτων.</p>";
+            }
         }
 
-        function performSearch() {
+        async function performSearch() {
             const universityId = document.getElementById("university").value;
             const programId = document.getElementById("program").value;
-            const skills = Array.from(document.querySelectorAll("input[type='checkbox']:checked"))
-                .map(cb => cb.dataset.skillName);
-            const payload = { university_id: universityId, program_id: programId, target_skills: skills };
-            localStorage.setItem("searchPayload", JSON.stringify(payload));
-            alert("Search payload saved:\n" + JSON.stringify(payload, null, 2));
+            const skills = Array.from(document.querySelectorAll("input[type='checkbox']:checked")).map(cb => cb.dataset.skillName);
+
+            if (!universityId || !programId || skills.length === 0) {
+                alert("Παρακαλώ συμπληρώστε όλα τα πεδία.");
+                return;
+            }
+
+            const resultsContainer = document.getElementById("resultsContainer");
+            resultsContainer.innerHTML = "<p>Φόρτωση συστάσεων...</p>";
+
+            try {
+                const response = await fetch(`${API_BASE}/universities/${universityId}/degrees/electives`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ program_id: parseInt(programId), target_skills: skills, top_n: 10 })
+                });
+                const data = await response.json();
+
+                if (!data.recommended_electives || data.recommended_electives.length === 0) {
+                    resultsContainer.innerHTML = "<p>Δεν βρέθηκαν προτεινόμενα μαθήματα επιλογής.</p>";
+                    return;
+                }
+
+                resultsContainer.innerHTML = "";
+                data.recommended_electives.forEach(course => {
+                    const card = document.createElement("div");
+                    card.innerHTML = `
+                        <h3>${course.lesson_name}</h3>
+                        <p><strong>Score:</strong> ${course.score}</p>
+                        ${course.skills?.length ? `<p><strong>Δεξιότητες:</strong> ${course.skills.join(', ')}</p>` : ''}
+                    `;
+                    resultsContainer.appendChild(card);
+                });
+            } catch (err) {
+                console.error(err);
+                resultsContainer.innerHTML = "<p style='color:red;'>Σφάλμα κατά την ανάκτηση συστάσεων.</p>";
+            }
         }
 
         document.addEventListener("DOMContentLoaded", () => {
             loadUniversities();
-            loadSkills();
             document.getElementById("university").addEventListener("change", e => loadPrograms(e.target.value));
+            document.getElementById("program").addEventListener("change", e => {
+                const univId = document.getElementById("university").value;
+                const programId = e.target.value;
+                loadElectiveSkills(univId, programId);
+            });
             document.getElementById("searchBtn").addEventListener("click", performSearch);
         });
     </script>
