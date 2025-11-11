@@ -125,11 +125,18 @@
             box-shadow: var(--shadow);
             transition: transform 0.2s, box-shadow 0.3s;
             border-left: 5px solid var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .result-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-info {
+            flex: 1;
         }
 
         .card-title {
@@ -147,14 +154,41 @@
             margin-bottom: 5px;
         }
 
-        .score-badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-weight: 700;
-            color: white;
-            font-size: 0.85em;
-            margin-top: 10px;
+        /* Circular progress */
+        .circular-progress {
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+
+        .circular-progress svg {
+            transform: rotate(-90deg);
+        }
+
+        .circular-progress circle {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+        }
+
+        .circular-progress .bg {
+            stroke: #eee;
+        }
+
+        .circular-progress .progress {
+            stroke: #4caf50;
+            stroke-dasharray: 219.91;
+            /* 2 * π * r */
+            stroke-dashoffset: 219.91;
+            transition: stroke-dashoffset 0.8s ease;
+        }
+
+        .circular-progress text {
+            font-size: 16px;
+            font-weight: 600;
+            fill: #343a40;
+            text-anchor: middle;
+            dominant-baseline: middle;
         }
     </style>
 </head>
@@ -208,37 +242,90 @@
             }
         }
 
+        function createCircularProgress(score) {
+            const radius = 35;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (score / 100) * circumference;
+
+            const svgNS = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(svgNS, "svg");
+            svg.setAttribute("width", "80");
+            svg.setAttribute("height", "80");
+
+            const bg = document.createElementNS(svgNS, "circle");
+            bg.setAttribute("cx", "40");
+            bg.setAttribute("cy", "40");
+            bg.setAttribute("r", radius);
+            bg.setAttribute("class", "bg");
+
+            const progress = document.createElementNS(svgNS, "circle");
+            progress.setAttribute("cx", "40");
+            progress.setAttribute("cy", "40");
+            progress.setAttribute("r", radius);
+            progress.setAttribute("class", "progress");
+            progress.style.strokeDasharray = circumference;
+            progress.style.strokeDashoffset = offset;
+
+            const text = document.createElementNS(svgNS, "text");
+            text.setAttribute("x", "40");
+            text.setAttribute("y", "45");
+            text.textContent = `${score}%`;
+
+            svg.appendChild(bg);
+            svg.appendChild(progress);
+            svg.appendChild(text);
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "circular-progress";
+            wrapper.appendChild(svg);
+
+            return wrapper;
+        }
+
         function displayResults(data) {
             const container = document.getElementById("results");
             container.innerHTML = "";
+
             if (!data || (!data.recommended_programs && !data.recommended_unlinked_courses)) {
                 container.innerHTML = "<p style='padding:20px;text-align:center;color:#6c757d;'>No recommendations found based on your selected criteria.</p>";
                 return;
             }
+
             const createCard = (title, meta, extra, score) => {
                 const card = document.createElement("div");
                 card.className = "result-card";
-                let scoreColor = score >= 80 ? "#28a745" : score >= 50 ? "#ffc107" : "#dc3545";
-                card.innerHTML = `<div class="card-title">${title}</div><div class="card-meta">${meta}</div><div class="card-extra">${extra}</div><span class="score-badge" style="background-color:${scoreColor}">${score}% Match</span>`;
+
+                const infoDiv = document.createElement("div");
+                infoDiv.className = "card-info";
+                infoDiv.innerHTML = `
+                    <div class="card-title">${title}</div>
+                    <div class="card-meta">${meta}</div>
+                    <div class="card-extra">${extra}</div>
+                `;
+                card.appendChild(infoDiv);
+                card.appendChild(createCircularProgress(score));
+
                 return card;
             };
+
             if (data.recommended_programs?.length) {
                 const div = document.createElement("div");
                 div.innerHTML = "<h3>🎓 Recommended Programs</h3>";
                 data.recommended_programs.forEach(p => {
                     const meta = `Type: ${p.degree_type || "N/A"}`;
                     const extra = `University: ${p.university || "—"} | Country: ${p.country || "—"} | Language: ${p.language || "—"}`;
-                    div.appendChild(createCard(p.degree_name, meta, extra, p.score || 0));
+                    div.appendChild(createCard(p.degree_name, meta, extra, Math.round((p.score || 0) * 100)));
                 });
                 container.appendChild(div);
             }
+
             if (data.recommended_unlinked_courses?.length) {
                 const div = document.createElement("div");
                 div.innerHTML = "<h3>📘 Independent Courses</h3>";
                 data.recommended_unlinked_courses.forEach(c => {
                     const meta = `Provider: ${c.provider || "N/A"}`;
                     const extra = `University: ${c.university || "—"}`;
-                    div.appendChild(createCard(c.lesson_name, meta, extra, c.score || 0));
+                    div.appendChild(createCard(c.lesson_name, meta, extra, Math.round((c.score || 0) * 100)));
                 });
                 container.appendChild(div);
             }

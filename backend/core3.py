@@ -90,7 +90,13 @@ class CourseRecommender:
 
             scored_programs.append({
                 "program_id": prog.program_id,
-                "degree_name": getattr(prog, 'degree_name', "N/A"),
+                "degree_name": (
+    (prog.degree_titles.get("el") if isinstance(prog.degree_titles, dict) and prog.degree_titles.get("el")
+     else prog.degree_titles.get("en") if isinstance(prog.degree_titles, dict) and prog.degree_titles.get("en")
+     else str(prog.degree_titles))
+    if prog.degree_titles else "N/A"
+),
+
                 "university": prog.university.university_name,
                 "language": prog.language,
                 "country": prog.university.country,
