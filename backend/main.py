@@ -10,9 +10,9 @@ from sqlalchemy import func, distinct, or_
 
 from backend.database import get_db, init_db
 from backend.models import University, DegreeProgram, Course, Skill, CourseSkill, text
-from backend.core import UniversityRecommender
-from backend.core2 import CourseRecommender as CourseRecommenderV2
-from backend.core3 import CourseRecommender as CourseRecommenderV3
+from backend.degree_recommender_for_university import UniversityRecommender
+from backend.course_recommender_for_university import CourseRecommender as CourseRecommenderV2
+from backend.student_recommender import CourseRecommender as CourseRecommenderV3
 
 
 app = FastAPI(title="Academic Recommender API", version="1.0")
@@ -172,152 +172,6 @@ def get_grouped_skills_by_categories(db: Session = Depends(get_db)):
 
     return grouped_sorted
 
-
-
-# 2. Endpoint: Αναζήτηση Προγραμμάτων και Μαθημάτων με Φίλτρα
-
-
-
-@app.get("/search", summary="Αναζήτηση Προγραμμάτων Σπουδών και Μαθημάτων")
-def search_academic_data(
-    skill_names: List[str] = Query(..., description="Λίστα με ονόματα δεξιοτήτων"),
-    degree_type: Optional[str] = Query(None, description="Τύπος Πτυχίου (BSc, MSc, PhD, Other)"),
-    country: Optional[str] = Query(None, description="Χώρα του Πανεπιστημίου"),
-    language: Optional[str] = Query(None, description="Γλώσσα Διδασκαλίας"),
-    db: Session = Depends(get_db)
-):
-    # --- Μετατροπή ονομάτων δεξιοτήτων σε IDs ---
-    skill_ids = [
-        s.skill_id
-        for s in db.query(Skill).filter(Skill.skill_name.in_(skill_names)).all()
-    ]
-    
-    # Αν δεν βρέθηκαν skill_ids, αγνοούμε το φίλτρο
-    if not skill_ids:
-        skill_ids = None
-
-    # --- Αναζήτηση Προγραμμάτων ---
-    program_query = db.query(DegreeProgram).options(joinedload(DegreeProgram.university))
-    
-    if degree_type:
-        program_query = program_query.filter(DegreeProgram.degree_type.ilike(degree_type))
-    
-    if country:
-        program_query = program_query.join(University).filter(University.country.ilike(country))
-    
-    if language:
-        program_query = program_query.filter(DegreeProgram.language.ilike(f"%{language}%"))
-    
-    if skill_ids:
-        programs_with_courses = (
-            db.query(Course.program_id)
-            .join(CourseSkill)
-            .filter(CourseSkill.skill_id.in_(skill_ids))
-            .distinct()
-        )
-        program_query = program_query.filter(DegreeProgram.program_id.in_(programs_with_courses))
-    
-    programs_results = program_query.all()
-
-    # --- Αναζήτηση Μαθημάτων ---
-    course_query = db.query(Course).options(joinedload(Course.university))
-    
-    if country:
-        course_query = course_query.join(University).filter(University.country.ilike(country))
-    
-    if language:
-        course_query = course_query.filter(Course.language.ilike(f"%{language}%"))
-    
-    if skill_ids:
-        course_query = course_query.join(CourseSkill).filter(CourseSkill.skill_id.in_(skill_ids))
-    
-    courses_results = course_query.distinct().all()
-
-    return {
-        "degree_programs": programs_results,
-        "courses": courses_results
-    }
-
-
-
-# =======================================================
-## 💡 Endpoints Συστάσεων (Recommenders)
-# =======================================================
-
-
-# 💡 ENDPOINT 1: Πρόταση Μαθημάτων ανά Πρόγραμμα (Program ID)
-@app.get("/recommend/courses/{university_id}", include_in_schema=False)
-def recommend_courses_for_degree(
-    university_id: int,
-    program_id: int = Query(..., alias="program_id", description="Το ID του ακαδηδημαϊκού προγράμματος"),
-    top_n_courses: int = 10,
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
-    """[Internal Use Only] Προτείνει μαθήματα (Courses) για ένα συγκεκριμένο Πρόγραμμα (Program ID)."""
-    try:
-        recommender = CourseRecommenderV2(db)
-       
-        all_univs = recommender.get_all_universities()
-        all_profiles: List[Dict[str, Any]] = []
-        for u in all_univs:
-            profiles = recommender.build_degree_profiles(u.university_id)
-            if profiles:
-                all_profiles.extend(profiles)
-       
-        if not all_profiles:
-            raise HTTPException(status_code=404, detail="Δεν βρέθηκαν προφίλ πτυχίων σε κανένα πανεπιστήμιο.")
-           
-        target_profiles = recommender.build_degree_profiles(university_id)
-       
-        target_degree = next(
-            (p for p in target_profiles
-             if p.get("program_id") == program_id),
-            None
-        )
-
-
-        if not target_degree:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Το Πρόγραμμα ID {program_id} δεν βρέθηκε στο Πανεπιστήμιο ID {university_id}."
-            )
-       
-        degree_name = target_degree["degree_title"]
-           
-        similar_degrees = recommender.find_similar_degrees(
-            target_degree,
-            all_profiles,
-            top_n=5
-        )
-       
-        result = recommender.suggest_courses_for_degree(
-            target_degree,
-            similar_degrees,
-            top_n=top_n_courses
-        )
-       
-        final_recommendations = [
-            {
-                "course_name": item['course'],
-                "score": item['score'],
-                "description": item.get('description', ''),
-                "objectives": item.get('objectives', ''),
-                "learning_outcomes": item.get('learning_outcomes', ''),
-                "course_content": item.get('course_content', ''),
-                "new_skills": item.get('new_skills', []),
-                "compatible_skills": item.get('compatible_skills', []),
-            }
-            for item in result
-            if isinstance(item, dict) and 'course' in item and 'score' in item
-        ]
-       
-        return {"university_id": university_id, "program_id": program_id, "degree": degree_name, "recommendations": final_recommendations}
-       
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        print(f"Error recommending courses for program {program_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
 
 
 # 💡 ENDPOINT 2: Πρόταση Μαθημάτων ανά Όνομα Πτυχίου (Frontend)
@@ -549,9 +403,6 @@ async def recommend_courses_by_name_safe(
 # =======================================================
 
 
-### ⚙️ Endpoints Φίλτρων
-
-
 @app.get("/filters/degree-types", response_model=List[str], summary="Επιστρέφει όλους τους μοναδικούς Τύπους Πτυχίου.")
 def get_unique_degree_types(db: Session = Depends(get_db)):
     """
@@ -607,14 +458,6 @@ def get_unique_languages(db: Session = Depends(get_db)):
 
 ### ℹ️ Γενικές Πληροφορίες
 
-
-@app.get("/similar/{univ_id}")
-def get_similar(univ_id: int, top_n: int = 5, db: Session = Depends(get_db)):
-    recommender = UniversityRecommender(db)
-    similar_univs = recommender.find_similar_universities(univ_id, top_n=top_n)
-    return {"target_university_id": univ_id, "similar_universities": similar_univs}
-
-
 @app.get("/recommend/degrees/{university_id}")
 def recommend_degrees(university_id: int, top_n: int = 5, db: Session = Depends(get_db)):
     recommender = UniversityRecommender(db)
@@ -631,24 +474,6 @@ def suggest_courses_for_university(univ_id: int, top_n: int = 10, db: Session = 
     recommender = CourseRecommenderV2(db)
     result = recommender.suggest_courses(univ_id, top_n)
     return {"university_id": univ_id, "recommendations": result}
-
-
-@app.post("/recommendations")
-def post_recommendations(payload: RecommendRequest, db: Session = Depends(get_db)):
-    recommender = CourseRecommenderV2(db)
-    result = recommender.suggest_courses(payload.university_id, payload.top_n)
-    return {"university_id": payload.university_id, "recommendations": result}
-
-
-@app.get("/debug/db-counts")
-def db_counts(db: Session = Depends(get_db)):
-    return {
-        "University": db.query(University).count(),
-        "DegreeProgram": db.query(DegreeProgram).count(),
-        "Course": db.query(Course).count(),
-        "Skill": db.query(Skill).count(),
-        "CourseSkill": db.query(CourseSkill).count(),
-    }
 
 
 @app.get("/universities")
@@ -712,48 +537,7 @@ def recommend_personalized(preferences: UserPreferences, db: Session = Depends(g
         # Επιστρέφουμε friendly error στο frontend
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
 
-@app.get("/degree-programs/{university_id}", summary="Λίστα Προγραμμάτων ανά Πανεπιστήμιο")
-def get_degree_programs_by_university(university_id: int, db: Session = Depends(get_db)):
-    programs = (
-        db.query(DegreeProgram)
-        .filter(DegreeProgram.university_id == university_id)
-        .order_by(DegreeProgram.degree_type)
-        .all()
-    )
-    return [
-        {
-            "program_id": p.program_id,
-            "degree_title": p.degree_titles.get("en", p.degree_titles.get("el", "")) if isinstance(p.degree_titles, dict) else p.degree_type,
-            "degree_type": p.degree_type,
-        }
-        for p in programs
-    ]
 
-from fastapi import HTTPException, Depends
-from sqlalchemy.orm import Session
-from typing import List
-from backend.models import University
-from backend.database import get_db
-from pydantic import BaseModel
-
-class DegreeProgramOut(BaseModel):
-    program_id: int
-    degree_type: str
-    degree_titles: list | None
-    language: str | None
-    duration_semesters: str | None
-    total_ects: str | None
-
-    class Config:
-        orm_mode = True
-
-@app.get("/universities/{univ_id}/degrees", response_model=List[DegreeProgramOut])
-def get_degree_programs(univ_id: int, db: Session = Depends(get_db)):
-    university = db.query(University).filter(University.university_id == univ_id).first()
-    if not university:
-        raise HTTPException(status_code=404, detail="University not found")
-
-    return university.programs
 from fastapi import Body
 
 class ElectiveRecommendationRequest(BaseModel):
@@ -803,7 +587,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel
-from backend.core3 import CourseRecommenderV4
+from backend.student_recommender import CourseRecommenderV4
 from backend.database import get_db
 from backend.models import DegreeProgram, Skill
 
@@ -934,10 +718,6 @@ def get_elective_skills_for_program(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-# =======================================================
-# ✅ ΕΝΣΩΜΑΤΩΣΗ ΤΟΥ ROUTER ΣΤΟ ΚΥΡΙΟ APP
-# =======================================================
-# app.include_router(router)  # Βεβαιώσου ότι το έχεις κάνει στο main app
 
 # ✅ ΕΝΣΩΜΑΤΩΣΗ ΤΟΥ ROUTER ΣΤΟ ΚΥΡΙΟ APP
 # =======================================================
