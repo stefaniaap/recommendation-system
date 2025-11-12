@@ -100,7 +100,7 @@ function handleRecommendCoursesClick(event) {
     const universityId = button.getAttribute('data-univ-id');
     const degreeName = button.getAttribute('data-degree-name');
     const encodedDegreeName = encodeURIComponent(degreeName);
-    window.location.href = `courses.html?univ_id=${universityId}&degree_name=${encodedDegreeName}`;
+    window.location.href = `recommended_degree_plan.html?univ_id=${universityId}&degree_name=${encodedDegreeName}`;
 }
 
 // =======================================================
