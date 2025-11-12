@@ -297,7 +297,9 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'http://127.0.0.1:8000';
+        // const API_BASE_URL = 'http://127.0.0.1:8000';
+        const API_BASE_URL = 'http://localhost:8000';
+
 
         function scoreToCourseColor(score) {
             const clampedScore = Math.max(0, Math.min(1, score));
@@ -437,7 +439,8 @@
             titleElement.textContent = `Loading Courses for ${decodedDegreeName}...`;
             loadingSpinner.style.display = 'block';
 
-            const endpoint = `${API_BASE_URL}/recommend/courses/${univId}/${encodeURIComponent(degreeName)}`;
+            const endpoint = `${API_BASE_URL}/recommend/new_degree/${encodeURIComponent(degreeName)}`;
+
             console.log("Calling API URL:", endpoint);
 
             try {

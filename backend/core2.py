@@ -57,16 +57,11 @@ class CourseRecommender:
             for t in titles if t
         ]
 
-    def get_course_details_by_name(self, course_name: str, target_univ_id: int) -> Dict[str, str]:
-        course = self.db.query(Course).filter(
-            Course.lesson_name == course_name,
-            Course.university_id == target_univ_id
-        ).first()
-
-        if not course:
-            course = self.db.query(Course).filter(
-                Course.lesson_name == course_name
-            ).first()
+    def get_course_details_by_name(self, course_name: str, target_univ_id: Optional[int] = None) -> Dict[str, str]:
+        query = self.db.query(Course).filter(Course.lesson_name == course_name)
+        if target_univ_id is not None:
+            query = query.filter(Course.university_id == target_univ_id)
+        course = query.first()
 
         if course:
             return {
@@ -166,7 +161,7 @@ class CourseRecommender:
         return [p for p, _ in ranked[:top_n]]
 
     # ==========================================================
-    # 3️⃣ Πρόταση μαθημάτων για ένα συγκεκριμένο πτυχίο
+    # 3️⃣ Πρόταση μαθημάτων για υπάρχον πτυχίο
     # ==========================================================
     def suggest_courses_for_degree(
         self,
@@ -251,29 +246,119 @@ class CourseRecommender:
 
             course_details = self.get_course_details_by_name(cname, target_univ_id)
 
-            # =======================
-            # DEBUG LOGS
-            # =======================
-            logger.info(f"Course: {cname}")
-            logger.info(f"Total Skills: {skills}")
-            logger.info(f"Specific Skills: {course_specific_skills_map.get(cname, set())}")
-            logger.info(f"Target Skills: {target_skills}")
-            logger.info(f"New Skills: {new_skills}")
-            logger.info(f"Compatible Skills: {compat_skills}")
-            logger.info(f"Freq Score: {freq_score}, Compat Score: {compat_score}, Novelty: {novelty_score}, NewSkillScore: {new_skill_score}")
-            logger.info(f"Total Score: {total_score}")
-            # =======================
+            results.append({
+                "course_name": cname,
+                "score": total_score,
+                "new_skills": sorted(list(new_skills)),
+                "compatible_skills": sorted(list(compat_skills)),
+                "description": course_details["description"],
+                "objectives": course_details["objectives"],
+                "learning_outcomes": course_details["learning_outcomes"],
+                "course_content": course_details["course_content"],
+            })
+
+        return sorted(results, key=lambda x: x["score"], reverse=True)[:top_n]
+
+    # ==========================================================
+    # 4️⃣ Πρόταση μαθημάτων για νέο πτυχίο
+    # ==========================================================
+    def suggest_courses_for_new_degree(
+        self,
+        similar_degrees: List[Dict[str, Any]],
+        target_skills: Optional[set] = None,
+        top_n: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """
+        Πρόταση μαθημάτων για ένα νέο πτυχίο.
+        Δεν αποκλείει μαθήματα που μπορεί να υπάρχουν στο target_degree,
+        γιατί πρόκειται για εντελώς νέο πτυχίο.
+        """
+
+        if not similar_degrees:
+            return [{"info": "Δεν υπάρχουν διαθέσιμα παρόμοια πτυχία για σύσταση."}]
+
+        if target_skills is None:
+            target_skills = set()
+
+        course_freq = defaultdict(int)
+        course_skills = defaultdict(set)
+        course_specific_skills_map = dict()
+
+        # Συγκέντρωση μαθημάτων και skills από όλα τα παρόμοια πτυχία
+        for deg in similar_degrees:
+            deg_skills = set(deg.get("skills", []))
+            for cname in deg.get("courses", []):
+                if not cname:
+                    continue
+
+                db_course = self.db.query(Course).filter(Course.lesson_name == cname).first()
+                course_specific_skills = set()
+                if db_course:
+                    for cs in getattr(db_course, "skills", []):
+                        if getattr(cs, "skill", None):
+                            skill_name = (cs.skill.skill_name or "").strip()
+                            if skill_name:
+                                course_specific_skills.add(skill_name)
+
+                if course_specific_skills or deg_skills:
+                    total_skills = deg_skills.union(course_specific_skills)
+                    course_freq[cname] += 1
+                    course_skills[cname].update(total_skills)
+                    course_specific_skills_map[cname] = course_specific_skills
+
+        if not course_freq:
+            logger.info("Δεν βρέθηκαν νέα μαθήματα για πρόταση.")
+            return [{"info": "Δεν βρέθηκαν νέα μαθήματα για πρόταση."}]
+
+        courses_list = list(course_freq.keys())
+        course_docs = [" ".join(course_skills[c]) for c in courses_list]
+        target_doc = " ".join(target_skills)
+        docs = course_docs + [target_doc]
+
+        if all(not doc.strip() for doc in docs):
+            logger.info("Η σύσταση απέτυχε λόγω έλλειψης δεξιοτήτων για σύγκριση.")
+            return [{"info": "Η σύσταση απέτυχε λόγω έλλειψης δεξιοτήτων για σύγκριση."}]
+
+        vectorizer = TfidfVectorizer()
+        vectors = vectorizer.fit_transform(docs)
+        sims = cosine_similarity(vectors[-1], vectors[:-1]).flatten()
+
+        max_freq = max(course_freq.values()) if course_freq else 1
+
+        results = []
+        for i, cname in enumerate(courses_list):
+            skills = course_skills[cname]
+            freq_score = course_freq[cname] / max_freq
+            new_skills = course_specific_skills_map.get(cname, set()) - target_skills
+            compat_skills = skills & target_skills
+
+            intersection_size = len(compat_skills)
+            union_size = len(skills | target_skills)
+            compat_score = intersection_size / union_size if union_size else 0.0
+            novelty_score = 1.0 - sims[i]
+            new_skill_score = len(new_skills) / (len(skills) + 1)
+            compatibility_factor = 1.0 if compat_score >= 0.1 else 0.05
+
+            total_score = round(
+                compatibility_factor * (
+                    0.40 * freq_score +
+                    0.35 * compat_score +
+                    0.15 * new_skill_score +
+                    0.10 * novelty_score
+                ), 3
+            )
+
+            course_details = self.get_course_details_by_name(cname, target_univ_id=None)
 
             results.append({
-    "course_name": cname,
-    "score": total_score,
-    "new_skills": sorted(list(new_skills)),
-    "compatible_skills": sorted(list(compat_skills)),
-    "description": course_details["description"],
-    "objectives": course_details["objectives"],
-    "learning_outcomes": course_details["learning_outcomes"],
-    "course_content": course_details["course_content"],
-})
-
+                "course_name": cname,
+                "score": total_score,
+                "new_skills": sorted(list(new_skills)),
+                "compatible_skills": sorted(list(compat_skills)),
+                "description": course_details["description"],
+                "objectives": course_details["objectives"],
+                "learning_outcomes": course_details["learning_outcomes"],
+                "course_content": course_details["course_content"],
+            })
 
         return sorted(results, key=lambda x: x["score"], reverse=True)[:top_n]

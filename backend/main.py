@@ -332,6 +332,96 @@ from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
+
+@app.get(
+    "/recommend/new_degree/{degree_name}",
+    response_model=CourseRecommendationsResponse,
+    summary="Προτείνει μαθήματα για ένα ΝΕΟ Πτυχίο, ανεξαρτήτως Πανεπιστημίου."
+)
+async def recommend_courses_for_new_degree(
+    degree_name: str = Path(..., description="Το κωδικοποιημένο όνομα του νέου Πτυχίου (URL-encoded)"),
+    top_n_courses: int = 10,
+    db: Session = Depends(get_db)
+):
+    """
+    Επιστρέφει προτεινόμενα μαθήματα για ένα νέο πτυχίο, βασισμένο σε παρόμοια πτυχία άλλων πανεπιστημίων.
+    Δεν αποκλείει μαθήματα που μπορεί να υπάρχουν ήδη, γιατί πρόκειται για εντελώς νέο πτυχίο.
+    """
+    try:
+        decoded_degree_name = unquote(degree_name).strip()
+        recommender = CourseRecommenderV2(db)
+
+        logger.info(f"Request for new degree_name='{decoded_degree_name}'")
+
+        # 1️⃣ Συλλογή όλων των προφίλ
+        all_univs = recommender.get_all_universities()
+        all_profiles: List[Dict[str, Any]] = []
+        for u in all_univs:
+            profiles = recommender.build_degree_profiles(u.university_id)
+            if profiles:
+                all_profiles.extend(profiles)
+
+        if not all_profiles:
+            logger.warning("No degree profiles found in any university.")
+            raise HTTPException(status_code=404, detail="Δεν βρέθηκαν προφίλ πτυχίων σε κανένα πανεπιστήμιο.")
+
+        # 2️⃣ Εύρεση παρόμοιων πτυχίων που ταιριάζουν στο όνομα (ή γενικά σε όλα)
+        similar_degrees = [
+            p for p in all_profiles
+            if recommender.normalize_name(p.get("degree_title")) == recommender.normalize_name(decoded_degree_name)
+        ]
+
+        if not similar_degrees:
+            logger.info("No exact degree name matches, using all profiles as similar degrees.")
+            similar_degrees = all_profiles  # fallback: όλα τα προφίλ
+
+        # 3️⃣ Συγκέντρωση skills για το νέο πτυχίο
+        all_skills = set()
+        for p in similar_degrees:
+            all_skills.update(p.get("skills", []) or [])
+
+        # 4️⃣ Πρόταση μαθημάτων για νέο πτυχίο
+        try:
+            result = recommender.suggest_courses_for_new_degree(
+                similar_degrees=similar_degrees,
+                target_skills=all_skills,
+                top_n=top_n_courses
+            )
+        except Exception as e:
+            logger.error(f"Error in suggest_courses_for_new_degree: {e}")
+            raise HTTPException(status_code=500, detail="Η σύσταση απέτυχε λόγω εσωτερικού σφάλματος.")
+
+        # 5️⃣ Δημιουργία τελικής λίστας απαντήσεων
+        final_recommendations = [
+            {
+                "course_name": item.get("course_name", "Unknown"),
+                "score": item.get("score", 0.0),
+                "description": item.get("description", ""),
+                "objectives": item.get("objectives", ""),
+                "learning_outcomes": item.get("learning_outcomes", ""),
+                "course_content": item.get("course_content", ""),
+                "new_skills": sorted(item.get("new_skills", [])),
+                "compatible_skills": sorted(item.get("compatible_skills", [])),
+            }
+            for item in result
+            if isinstance(item, dict) and "course_name" in item
+        ]
+
+        # 6️⃣ Επιστροφή αποτελέσματος
+        return CourseRecommendationsResponse(
+            university_id=-1,  # Δεν υπάρχει συγκεκριμένο πανεπιστήμιο
+            program_id=-1,
+            degree=decoded_degree_name,
+            recommendations=final_recommendations
+        )
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.exception(f"Unexpected error in recommend_courses_for_new_degree: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+
+
 @app.get(
     "/recommend/courses/{university_id}/{degree_name}",
     response_model=CourseRecommendationsResponse,
