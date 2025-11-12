@@ -1,22 +1,18 @@
-from fastapi import FastAPI, Depends, HTTPException, Query, Path
+from fastapi import FastAPI, Depends, HTTPException, Query, Path, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
+from collections import defaultdict
+from urllib.parse import unquote
+
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, distinct, or_
-from urllib.parse import unquote
-from pydantic import BaseModel, Field
-from fastapi import APIRouter, Query, Depends
 
-
-# Εισαγωγές για τη Βάση Δεδομένων, μοντέλα και Recommenders
 from backend.database import get_db, init_db
 from backend.models import University, DegreeProgram, Course, Skill, CourseSkill, text
 from backend.core import UniversityRecommender
 from backend.core2 import CourseRecommender as CourseRecommenderV2
 from backend.core3 import CourseRecommender as CourseRecommenderV3
-
-from collections import defaultdict
-from fastapi import HTTPException
 
 
 app = FastAPI(title="Academic Recommender API", version="1.0")
@@ -116,6 +112,8 @@ def startup_event():
         init_db()
     except Exception as e:
         print(f"Error initializing DB: {e}")
+
+
 
 
 # =========================================================================
@@ -345,13 +343,17 @@ async def recommend_courses_by_name_safe(
     top_n_courses: int = 10,
     db: Session = Depends(get_db)
 ):
+    """
+    Επιστρέφει προτεινόμενα μαθήματα για ένα συγκεκριμένο Πτυχίο, με βάση παρόμοια προγράμματα σπουδών.
+    """
     try:
         decoded_degree_name = unquote(degree_name).strip()
         recommender = CourseRecommenderV2(db)
 
+
         logger.info(f"Request for university_id={university_id}, degree_name='{decoded_degree_name}'")
 
-        # Συλλογή όλων των προφίλ
+        # 1️⃣ Συλλογή όλων των προφίλ
         all_univs = recommender.get_all_universities()
         all_profiles: List[Dict[str, Any]] = []
         for u in all_univs:
@@ -363,7 +365,7 @@ async def recommend_courses_by_name_safe(
             logger.warning("No degree profiles found in any university.")
             raise HTTPException(status_code=404, detail="Δεν βρέθηκαν προφίλ πτυχίων σε κανένα πανεπιστήμιο.")
 
-        # Βρες τα profiles που ταιριάζουν με το όνομα πτυχίου
+        # 2️⃣ Εύρεση αντιπροσωπευτικών προφίλ για το πτυχίο
         representative_profiles = [
             p for p in all_profiles
             if recommender.normalize_name(p.get("degree_title")) == recommender.normalize_name(decoded_degree_name)
@@ -376,7 +378,7 @@ async def recommend_courses_by_name_safe(
                 detail=f"Το Πτυχίο '{decoded_degree_name}' δεν βρέθηκε σε κανένα πανεπιστήμιο για ανάλυση."
             )
 
-        # Δημιουργία συνθετικού target degree
+        # 3️⃣ Δημιουργία συνθετικού "target degree"
         degree_type = representative_profiles[0].get("degree_type", "N/A")
         all_skills = set()
         all_courses = set()
@@ -393,7 +395,7 @@ async def recommend_courses_by_name_safe(
             "courses": list(all_courses),
         }
 
-        # Βρες παρόμοια πτυχία
+        # 4️⃣ Εύρεση παρόμοιων πτυχίων
         similar_degrees = recommender.find_similar_degrees(
             synthetic_target_degree,
             all_profiles,
@@ -409,8 +411,7 @@ async def recommend_courses_by_name_safe(
                 recommendations=[]
             )
 
-        # Προτεινόμενα μαθήματα με ασφαλή handling
-        result = []
+        # 5️⃣ Πρόταση μαθημάτων
         try:
             result = recommender.suggest_courses_for_degree(
                 synthetic_target_degree,
@@ -419,24 +420,25 @@ async def recommend_courses_by_name_safe(
             )
         except Exception as e:
             logger.error(f"Error in suggest_courses_for_degree: {e}")
-            result = [{"info": "Η σύσταση απέτυχε λόγω εσωτερικού σφάλματος."}]
+            raise HTTPException(status_code=500, detail="Η σύσταση απέτυχε λόγω εσωτερικού σφάλματος.")
 
-        # Φιλτράρισμα μόνο σωστών αντικειμένων
+        # 6️⃣ Δημιουργία τελικής λίστας απαντήσεων
         final_recommendations = [
             {
-                "course_name": item.get('course', 'Unknown'),
-                "score": item.get('score', 0.0),
-                "description": item.get('description', ''),
-                "objectives": item.get('objectives', ''),
-                "learning_outcomes": item.get('learning_outcomes', ''),
-                "course_content": item.get('course_content', ''),
-                "new_skills": sorted(item.get('new_skills', [])),
-                "compatible_skills": sorted(item.get('compatible_skills', [])),
+                "course_name": item.get("course_name", "Unknown"),
+                "score": item.get("score", 0.0),
+                "description": item.get("description", ""),
+                "objectives": item.get("objectives", ""),
+                "learning_outcomes": item.get("learning_outcomes", ""),
+                "course_content": item.get("course_content", ""),
+                "new_skills": sorted(item.get("new_skills", [])),
+                "compatible_skills": sorted(item.get("compatible_skills", [])),
             }
             for item in result
-            if isinstance(item, dict) and ('course' in item or 'info' in item)
+            if isinstance(item, dict) and "course_name" in item
         ]
 
+        # 7️⃣ Επιστροφή αποτελέσματος
         return CourseRecommendationsResponse(
             university_id=university_id,
             program_id=-1,
@@ -449,6 +451,7 @@ async def recommend_courses_by_name_safe(
     except Exception as e:
         logger.exception(f"Unexpected error in recommend_courses_by_name_safe: {e}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+
 
 
 # =======================================================
@@ -522,13 +525,11 @@ def get_similar(univ_id: int, top_n: int = 5, db: Session = Depends(get_db)):
     return {"target_university_id": univ_id, "similar_universities": similar_univs}
 
 
-
 @app.get("/recommend/degrees/{university_id}")
 def recommend_degrees(university_id: int, top_n: int = 5, db: Session = Depends(get_db)):
     recommender = UniversityRecommender(db)
     results = recommender.suggest_degrees_with_skills(university_id, top_n=top_n)
     return {"university_id": university_id, "recommended_degrees": results}
-
 
 
 
@@ -851,3 +852,5 @@ def get_elective_skills_for_program(
 # ✅ ΕΝΣΩΜΑΤΩΣΗ ΤΟΥ ROUTER ΣΤΟ ΚΥΡΙΟ APP
 # =======================================================
 app.include_router(router)
+
+

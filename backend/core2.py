@@ -265,14 +265,15 @@ class CourseRecommender:
             # =======================
 
             results.append({
-                "course": cname,
-                "score": total_score,
-                "new_skills": sorted(list(new_skills)),
-                "compatible_skills": sorted(list(compat_skills)),
-                "description": course_details["description"],
-                "objectives": course_details["objectives"],
-                "learning_outcomes": course_details["learning_outcomes"],
-                "course_content": course_details["course_content"],
-            })
+    "course_name": cname,
+    "score": total_score,
+    "new_skills": sorted(list(new_skills)),
+    "compatible_skills": sorted(list(compat_skills)),
+    "description": course_details["description"],
+    "objectives": course_details["objectives"],
+    "learning_outcomes": course_details["learning_outcomes"],
+    "course_content": course_details["course_content"],
+})
+
 
         return sorted(results, key=lambda x: x["score"], reverse=True)[:top_n]

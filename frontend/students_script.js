@@ -1,4 +1,4 @@
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE_URL = 'http://api:8000';
 
 // ---------------------------
 // Load Degree Types, Countries, Languages

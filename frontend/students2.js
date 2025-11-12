@@ -1,7 +1,7 @@
 // university_script.js
 
 // Base URL for the backend API (FastAPI)
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = 'http://api:8000';
 
 // -----------------------------------------------
 // Function: updateMetrics

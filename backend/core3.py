@@ -216,15 +216,53 @@ class CourseRecommenderV4:
             self.tfidf_weight = tfidf_weight / total
             self.overlap_weight = overlap_weight / total
 
+    # =============================================================
+# 2️⃣ CourseRecommenderV4 — Electives Recommendation per Program
+# =============================================================
+import logging
+import re
+from typing import List, Dict, Any, Set
+from sqlalchemy.orm import Session
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+
+def _normalize_skill(s: str) -> str:
+    """Καθαρίζει και κανονικοποιεί ένα skill token."""
+    if not s:
+        return ""
+    s = str(s).strip().lower()
+    s = re.sub(r"[^a-z0-9\u0370-\u03FF\u1F00-\u1FFF\s\-\+\.#]", "", s)
+    return s
+
+
+class CourseRecommenderV4:
+    """Προτείνει μαθήματα επιλογής (electives) για συγκεκριμένο πρόγραμμα & πανεπιστήμιο."""
+
+    def __init__(self, db: Session, tfidf_weight: float = 0.6, overlap_weight: float = 0.4):
+        self.db = db
+        total = (tfidf_weight or 0.0) + (overlap_weight or 0.0)
+        if total <= 0:
+            self.tfidf_weight = 0.6
+            self.overlap_weight = 0.4
+        else:
+            self.tfidf_weight = tfidf_weight / total
+            self.overlap_weight = overlap_weight / total
+
     def recommend_electives_for_degree_enhanced(
         self,
         univ_id: int,
         program_id: int,
         target_skills: List[str],
-        top_n: int = 10,
-        min_overlap_ratio: float = 0.0,
+        top_n: int = 5,
+        min_overlap_ratio: float = 0.1,
     ) -> Dict[str, Any]:
         """Προτείνει electives για συγκεκριμένο πρόγραμμα σπουδών βάσει skills χρήστη."""
+
+        # --- Normalize user skills ---
         user_skills_norm = [_normalize_skill(s) for s in (target_skills or []) if _normalize_skill(s)]
         user_skills_set: Set[str] = set(user_skills_norm)
         if not user_skills_set:
@@ -232,6 +270,7 @@ class CourseRecommenderV4:
 
         user_text = " ".join(sorted(user_skills_set))
 
+        # --- Βρες το πρόγραμμα σπουδών ---
         program = self.db.query(DegreeProgram).filter_by(program_id=program_id, university_id=univ_id).first()
         if not program:
             return {"message": "Δεν βρέθηκε το πρόγραμμα σπουδών για αυτό το πανεπιστήμιο."}
@@ -254,6 +293,7 @@ class CourseRecommenderV4:
         if not elective_courses:
             return {"message": "Δεν υπάρχουν μαθήματα επιλογής για αυτό το πρόγραμμα."}
 
+        # --- Prepare course skill data ---
         course_objs, course_skill_texts, course_skill_sets, course_raw_skills = [], [], [], []
 
         for c in elective_courses:
@@ -293,7 +333,7 @@ class CourseRecommenderV4:
             logger.exception("TF-IDF vectorization failed: %s", e)
             tfidf_scores = [0.0] * len(course_objs)
 
-        # --- Compute scores ---
+        # --- Compute final scores (TF-IDF + Overlap only) ---
         scored = []
         for i, c in enumerate(course_objs):
             course_set = course_skill_sets[i]
@@ -301,19 +341,19 @@ class CourseRecommenderV4:
             missing = sorted(list(course_set - user_skills_set))
             overlap_ratio = len(matched) / len(course_set | user_skills_set) if (course_set | user_skills_set) else 0.0
             tfidf_score = float(tfidf_scores[i]) if i < len(tfidf_scores) else 0.0
+
+            # Φιλτράρισμα χαμηλής συνάφειας
             if overlap_ratio < min_overlap_ratio and tfidf_score < 0.01:
                 continue
 
-            final_raw = (self.tfidf_weight * tfidf_score) + (self.overlap_weight * overlap_ratio)
-            new_skill_count = len([s for s in course_set if s not in user_skills_set])
-            new_skill_bonus = 0.02 * min(new_skill_count, 5)
-            final_score = max(0.0, min(1.0, final_raw + new_skill_bonus))
+            # Τελικό σκορ
+            final_score = (self.tfidf_weight * tfidf_score) + (self.overlap_weight * overlap_ratio)
+            final_score = max(0.0, min(1.0, final_score))
 
+            # Λόγοι για scoring
             reason = []
             if matched:
                 reason.append(f"Κοινές δεξιότητες: {len(matched)} ({', '.join(matched[:5])})")
-            if new_skill_count:
-                reason.append(f"Φέρνει νέες δεξιότητες: {new_skill_count}")
             if tfidf_score > 0.0:
                 reason.append(f"Semantic similarity: {round(tfidf_score,3)}")
             reason_text = "; ".join(reason) if reason else "Χαμηλή συνάφεια."
@@ -331,7 +371,12 @@ class CourseRecommenderV4:
                 "skills": course_raw_skills[i],
             })
 
-        scored_sorted = sorted(scored, key=lambda x: x["final_score"], reverse=True)[:max(1, top_n)]
+       
+        # --- Keep only courses with final_score >= 0.1 ---
+        scored_filtered = [c for c in scored if c["final_score"] >= 0.1]
+
+        # --- Sort by final score and limit to top_n ---
+        scored_sorted = sorted(scored_filtered, key=lambda x: x["final_score"], reverse=True)[:max(1, top_n)]
 
         return {
             "recommended_electives": scored_sorted,
