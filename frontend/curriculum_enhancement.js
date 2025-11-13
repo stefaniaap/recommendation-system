@@ -11,19 +11,42 @@ function scoreToCourseColor(score) {
 }
 
 function displayCourseHeatmap(courses) {
-    const allSkills = Array.from(new Set(courses.flatMap(c => [...(c.new_skills || []), ...(c.compatible_skills || [])])));
+    const allSkills = Array.from(new Set(
+        courses.flatMap(c => [...(c.new_skills || []), ...(c.compatible_skills || [])])
+    ));
     const labels = courses.map(c => c.course_name || 'Unknown Course');
 
-    const datasets = allSkills.map(skill => ({
+    // Δημιουργούμε πολλές αποχρώσεις του μπλε για τις compatible skills
+    const compatibleShades = [
+        'rgba(13, 202, 240, 0.9)',
+        'rgba(0, 180, 220, 0.85)',
+        'rgba(0, 160, 200, 0.8)',
+        'rgba(0, 140, 180, 0.75)',
+        'rgba(0, 120, 160, 0.7)',
+        'rgba(0, 100, 140, 0.65)',
+        'rgba(0, 80, 120, 0.6)'
+    ];
+
+    const datasets = allSkills.map((skill, i) => ({
         label: skill,
-        data: courses.map(course => 1),
+        data: courses.map(() => 1),
         backgroundColor: courses.map(course => {
-            if ((course.new_skills || []).includes(skill)) return 'rgba(25, 135, 84, 0.8)';
-            if ((course.compatible_skills || []).includes(skill)) return 'rgba(13, 202, 240, 0.8)';
-            return 'rgba(220,220,220,0.3)';
+            if ((course.new_skills || []).includes(skill))
+                return 'rgba(25, 135, 84, 0.9)'; // πράσινο για new
+            if ((course.compatible_skills || []).includes(skill))
+                return compatibleShades[i % compatibleShades.length]; // διαφορετική μπλε απόχρωση
+            return 'rgba(220,220,220,0.25)';
         }),
-        borderWidth: 0,
-        barThickness: 12
+        borderColor: courses.map(course => {
+            if ((course.new_skills || []).includes(skill)) return '#146c43';
+            if ((course.compatible_skills || []).includes(skill)) return '#0dcaf0';
+            return 'rgba(200,200,200,0.3)';
+        }),
+        borderWidth: 1.3,
+        borderRadius: 5,
+        barThickness: 16,
+        categoryPercentage: 0.9,
+        barPercentage: 0.85
     }));
 
     const ctx = document.getElementById('skillsHeatmapChart').getContext('2d');
@@ -33,14 +56,23 @@ function displayCourseHeatmap(courses) {
         options: {
             indexAxis: 'y',
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'top' },
+                legend: {
+                    position: 'top',
+                    labels: {
+                        boxWidth: 14,
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded'
+                    }
+                },
                 tooltip: {
                     callbacks: {
                         label: function (context) {
                             const color = context.dataset.backgroundColor[context.dataIndex];
-                            if (color.includes('25, 135, 84')) return context.dataset.label + ': New Skill';
-                            if (color.includes('13, 202, 240')) return context.dataset.label + ': Compatible Skill';
+                            if (color.includes('25, 135, 84')) return context.dataset.label + ': 🟢 New Skill';
+                            if (color.includes('13, 202, 240') || color.includes('0, 180') || color.includes('0, 160'))
+                                return context.dataset.label + ': 🔵 Compatible Skill';
                             return context.dataset.label + ': -';
                         }
                     }
@@ -53,6 +85,7 @@ function displayCourseHeatmap(courses) {
         }
     });
 }
+
 
 function displayCourseRecommendations(courses, degreeName) {
     const resultsContainer = document.getElementById('course-recommendation-list');

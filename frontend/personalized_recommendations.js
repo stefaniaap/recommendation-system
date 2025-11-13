@@ -96,41 +96,64 @@ function displayResults(data) {
         const card = document.createElement("div");
         card.className = "result-card";
 
+        const cleanTitle = title.replace(/[[\]"']+/g, '');
+
         const infoDiv = document.createElement("div");
         infoDiv.className = "card-info";
         infoDiv.innerHTML = `
-                    <div class="card-title">${title}</div>
-                    <div class="card-meta">${meta}</div>
-                    <div class="card-extra">${extra}</div>
-                `;
+            <div class="card-title">${cleanTitle}</div>
+            <div class="card-meta">${meta}</div>
+            <div class="card-extra">${extra}</div>
+        `;
+
         card.appendChild(infoDiv);
         card.appendChild(createCircularProgress(score));
 
         return card;
     };
 
+    // Recommended Programs
     if (data.recommended_programs?.length) {
         const div = document.createElement("div");
-        div.innerHTML = "<h3>🎓 Recommended Programs</h3>";
+        div.innerHTML = "<h3> Recommended Programs</h3>";
+
         data.recommended_programs.forEach(p => {
+            let score = (p.score || 0) * 100;
+            score = Math.max(1, Math.min(score, 100));
+            score = Math.round(score);
+
+            if (score < 20) return; // φίλτρο κάτω από 20%
+
             const meta = `Type: ${p.degree_type || "N/A"}`;
             const extra = `University: ${p.university || "—"} | Country: ${p.country || "—"} | Language: ${p.language || "—"}`;
-            div.appendChild(createCard(p.degree_name, meta, extra, Math.round((p.score || 0) * 100)));
+            div.appendChild(createCard(p.degree_name, meta, extra, score));
         });
+
         container.appendChild(div);
     }
 
+    // Independent Courses
     if (data.recommended_unlinked_courses?.length) {
         const div = document.createElement("div");
         div.innerHTML = "<h3>📘 Independent Courses</h3>";
+
         data.recommended_unlinked_courses.forEach(c => {
+            let score = (c.score || 0) * 100;
+            score = Math.max(1, Math.min(score, 100));
+            score = Math.round(score);
+
+            if (score < 20) return; // φίλτρο κάτω από 20%
+
             const meta = `Provider: ${c.provider || "N/A"}`;
             const extra = `University: ${c.university || "—"}`;
-            div.appendChild(createCard(c.lesson_name, meta, extra, Math.round((c.score || 0) * 100)));
+            div.appendChild(createCard(c.lesson_name, meta, extra, score));
         });
+
         container.appendChild(div);
     }
 }
+
+
 
 async function performSearch() {
     const selectedSkills = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.dataset.skillName);

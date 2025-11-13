@@ -96,14 +96,16 @@ async function performSearch() {
         resultsContainer.innerHTML = "";
         data.recommended_electives.forEach(course => {
             const card = document.createElement("div");
+            card.className = "result-card";
             card.innerHTML = `
-        <h3>${course.course_name}</h3>
-        <p><strong>Score:</strong> ${course.score}</p>
+        <h4> ${course.course_name}</h4>
+        <p><strong>Score:</strong> ${course.score.toFixed(3)}</p>
         ${course.skills?.length ? `<p><strong>Δεξιότητες:</strong> ${course.skills.join(', ')}</p>` : ''}
         ${course.matching_skills?.length ? `<p><strong>Συμβατές δεξιότητες:</strong> ${course.matching_skills.join(', ')}</p>` : ''}
     `;
             resultsContainer.appendChild(card);
         });
+
 
     } catch (err) {
         console.error(err);

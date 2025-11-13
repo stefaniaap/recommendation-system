@@ -1,4 +1,4 @@
-// const API_BASE_URL = 'http://127.0.0.1:8000';
+
 const API_BASE_URL = 'http://localhost:8000';
 
 
@@ -13,48 +13,99 @@ function scoreToCourseColor(score) {
 }
 
 function displayCourseHeatmap(courses) {
-    const allSkills = Array.from(new Set(courses.flatMap(c => [...(c.new_skills || []), ...(c.compatible_skills || [])])));
-    const labels = courses.map(c => c.course_name || 'Unknown Course');
+    const allSkills = Array.from(new Set(
+        courses.flatMap(c => [...(c.new_skills || []), ...(c.compatible_skills || [])])
+    ));
 
-    const datasets = allSkills.map(skill => ({
-        label: skill,
-        data: courses.map(course => 1),
-        backgroundColor: courses.map(course => {
-            if ((course.new_skills || []).includes(skill)) return 'rgba(25, 135, 84, 0.8)';
-            if ((course.compatible_skills || []).includes(skill)) return 'rgba(13, 202, 240, 0.8)';
-            return 'rgba(220,220,220,0.3)';
-        }),
-        borderWidth: 0,
-        barThickness: 12
-    }));
+    const courseNames = courses.map(c => c.course_name);
+
+    // Δημιουργία χρωμάτων για κάθε skill (hue-based)
+    const skillHueMap = {};
+    allSkills.forEach((skill, i) => skillHueMap[skill] = Math.round((i * 137.508) % 360));
+
+    // Δημιουργία δεδομένων για heatmap
+    const datasets = allSkills.map(skill => {
+        const data = courseNames.map(courseName => {
+            const course = courses.find(c => c.course_name === courseName);
+            if (!course) return 0;
+            if ((course.new_skills || []).includes(skill)) return 2; // new skill
+            if ((course.compatible_skills || []).includes(skill)) return 1; // compatible
+            return 0; // δεν υπάρχει
+        });
+
+        return {
+            label: skill,
+            data: data,
+            backgroundColor: data.map(val => {
+                if (val === 2) return `hsl(${skillHueMap[skill]}, 70%, 50%)`; // new
+                if (val === 1) return `hsl(${skillHueMap[skill]}, 70%, 80%)`; // compatible
+                return 'rgba(0,0,0,0)'; // κενό
+            }),
+            borderColor: '#fff',
+            borderWidth: 1,
+            barThickness: 20
+        };
+    });
 
     const ctx = document.getElementById('skillsHeatmapChart').getContext('2d');
-    new Chart(ctx, {
+    if (window.skillsHeatmapChart && typeof window.skillsHeatmapChart.destroy === 'function') {
+        window.skillsHeatmapChart.destroy();
+    }
+
+    window.skillsHeatmapChart = new Chart(ctx, {
         type: 'bar',
-        data: { labels, datasets },
+        data: {
+            labels: courseNames, // y-axis = courses
+            datasets: datasets
+        },
         options: {
             indexAxis: 'y',
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'top' },
                 tooltip: {
                     callbacks: {
-                        label: function (context) {
-                            const color = context.dataset.backgroundColor[context.dataIndex];
-                            if (color.includes('25, 135, 84')) return context.dataset.label + ': New Skill';
-                            if (color.includes('13, 202, 240')) return context.dataset.label + ': Compatible Skill';
-                            return context.dataset.label + ': -';
+                        label: ctx => {
+                            const course = ctx.label;
+                            const skill = ctx.dataset.label;
+                            const val = ctx.raw;
+                            if (val === 2) return `${course}: ${skill} (New)`;
+                            if (val === 1) return `${course}: ${skill} (Compatible)`;
+                            return null;
+                        }
+                    }
+                },
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        generateLabels: chart => {
+                            return allSkills.map(skill => {
+                                const hue = skillHueMap[skill];
+                                return [
+                                    { text: `${skill} (New)`, fillStyle: `hsl(${hue},70%,50%)` },
+                                    { text: `${skill} (Compatible)`, fillStyle: `hsl(${hue},70%,80%)` }
+                                ];
+                            }).flat();
                         }
                     }
                 }
             },
             scales: {
-                x: { stacked: true, display: false },
-                y: { stacked: true }
+                x: {
+                    stacked: false,
+                    title: { display: true, text: 'Skills' }
+                },
+                y: {
+                    stacked: false,
+                    title: { display: true, text: 'Courses' }
+                }
             }
         }
     });
 }
+
+
 
 function displayCourseRecommendations(courses, degreeName) {
     const resultsContainer = document.getElementById('course-recommendation-list');
