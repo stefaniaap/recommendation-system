@@ -1,13 +1,21 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>University & Program Search</title>
+
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
+        /* ===================
+           CSS Variables for consistent styling
+           =================== */
         :root {
             --primary-color: #6a9bd8;
             --secondary-color: #6c757d;
@@ -21,19 +29,25 @@
             --skill-header-bg: #e9ecef;
         }
 
+        /* ===================
+           Body & Layout
+           =================== */
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--background-color);
             margin: 0;
             display: flex;
+            /* Sidebar + main content */
             min-height: 100vh;
         }
 
-        /* === Result Cards Styling === */
+        /* ===================
+           Result Cards Styling
+           =================== */
         .result-card {
             background-color: #fff;
             border-left: 6px solid var(--primary-color);
-            /* μπλε ρίγα */
+            /* Left accent line */
             border-radius: 10px;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
             padding: 20px;
@@ -65,8 +79,9 @@
             margin-top: 8px;
         }
 
-
-        /* Sidebar */
+        /* ===================
+           Sidebar Styling
+           =================== */
         .sidebar {
             width: 250px;
             background-color: var(--sidebar-color);
@@ -106,6 +121,7 @@
             width: 100%;
         }
 
+        /* Sidebar links */
         .sidebar nav a {
             color: #ecf0f1;
             text-decoration: none;
@@ -117,30 +133,37 @@
             font-size: 1em;
         }
 
+        /* Hover effect for sidebar links */
         .sidebar nav a:hover {
             background-color: var(--active-sidebar-color);
             color: var(--primary-color);
         }
 
+        /* Active page in sidebar */
         .sidebar nav a.active-student {
             background-color: var(--active-sidebar-color);
             color: var(--active-sidebar-text);
             font-weight: 600;
         }
 
+        /* Indented submenu items */
         .submenu-item {
             padding-left: 35px !important;
             font-size: 0.9em !important;
             margin-top: -5px !important;
         }
 
-        /* Main Content */
+        /* ===================
+           Main Content Styling
+           =================== */
         .main-content {
             margin-left: 250px;
+            /* Offset for sidebar */
             flex-grow: 1;
             padding: 40px;
         }
 
+        /* Page Title */
         .page-title {
             text-align: center;
             margin-bottom: 10px;
@@ -160,6 +183,7 @@
             margin-top: 0;
         }
 
+        /* Filter Card */
         .filter-card {
             background-color: var(--card-bg);
             padding: 30px;
@@ -195,6 +219,7 @@
             background-color: white;
         }
 
+        /* Skills Container */
         #skillsContainer {
             margin: 30px 0;
             border: 1px solid #dee2e6;
@@ -218,6 +243,7 @@
             transform: scale(1.1);
         }
 
+        /* Search Button */
         .button-group {
             margin-top: 40px;
             display: flex;
@@ -245,6 +271,7 @@
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         }
 
+        /* Results Container */
         #resultsContainer div {
             background: #fff;
             padding: 15px;
@@ -256,7 +283,9 @@
 </head>
 
 <body>
-    <!-- Sidebar -->
+    <!-- ===================
+         Sidebar Navigation
+         =================== -->
     <div class="sidebar">
         <div class="logo-section">
             <a href="landing_page.html">
@@ -271,10 +300,9 @@
             <a href="new_degree_purposals.html" class="submenu-item"><i class="fas fa-lightbulb"></i> New Degree
                 Proposals</a>
             <a href="recommended_degree_plan.html" class="submenu-item"><i class="fas fa-graduation-cap"></i>
-                Recommended Degree
-                Plan</a>
-            <a href="curriculum_enhancement.html" class="submenu-item"><i class="fas fa-layer-group"></i> Curriculum
-                Enhancement</a>
+                Recommended Degree Plan</a>
+            <a href="curriculum_enhancement.html" class="submenu-item"><i class="fas fa-layer-group"></i>
+                Curriculum Enhancement</a>
             <a href="student_analysis.html" style="margin-top: 20px;">
                 <i class="fas fa-user-graduate"></i> Student Role
             </a>
@@ -284,27 +312,31 @@
             <a href="degree_based_recommendations.html" class="active-student submenu-item">
                 <i class="fas fa-brain"></i> Degree-Based Recommendations
             </a>
-
-
         </nav>
     </div>
 
-    <!-- Main Content -->
+    <!-- ===================
+         Main Content
+         =================== -->
     <div class="main-content">
+        <!-- Page Header -->
         <div class="page-title">
             <h1>University & Program Finder</h1>
             <p>Search elective courses based on skills</p>
         </div>
 
+        <!-- Filters & Skills Selection Card -->
         <div class="filter-card">
             <h3><i class="fas fa-filter"></i> Select Filters</h3>
             <div class="filter-grid">
+                <!-- University Dropdown -->
                 <div>
                     <label for="university"><i class="fas fa-university"></i> University:</label>
                     <select id="university">
                         <option value="">-- Select University --</option>
                     </select>
                 </div>
+                <!-- Degree Program Dropdown -->
                 <div>
                     <label for="program"><i class="fas fa-book"></i> Degree Program:</label>
                     <select id="program">
@@ -313,19 +345,23 @@
                 </div>
             </div>
 
+            <!-- Skills Selection -->
             <h3><i class="fas fa-cogs"></i> Select Skills</h3>
             <div id="skillsContainer">
-                <p>Επιλέξτε πανεπιστήμιο και πρόγραμμα πρώτα.</p>
+                <p>Select a university and degree program first.</p>
             </div>
 
+            <!-- Search Button -->
             <div class="button-group">
                 <button id="searchBtn"><i class="fas fa-search"></i> Suggest Electives</button>
             </div>
 
+            <!-- Search Results -->
             <div id="resultsContainer" style="margin-top:30px;"></div>
         </div>
     </div>
 
+    <!-- External JS for handling dropdowns, skills selection, and search functionality -->
     <script src="degree_based_recommendations.js"></script>
 </body>
 

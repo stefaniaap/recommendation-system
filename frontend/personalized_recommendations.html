@@ -5,22 +5,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Recommendations</title>
+
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
+        /* ======================================================
+           Root CSS variables for consistent theming
+        ====================================================== */
         :root {
             --primary-color: #6a9bd8;
+            /* Main blue color */
             --secondary-color: #6c757d;
+            /* Gray text color */
             --background-color: #f4f6f9;
+            /* Page background */
             --sidebar-color: #2c3e50;
+            /* Sidebar background */
             --card-bg: #ffffff;
+            /* Card background */
             --border-radius: 10px;
+            /* Rounded corners */
             --shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+            /* Box shadow for cards */
             --active-sidebar-color: rgba(255, 255, 255, 0.1);
+            /* Active sidebar background */
             --active-sidebar-text: white;
+            /* Active sidebar text */
             --skill-header-bg: #e9ecef;
+            /* Background for skill category headers */
         }
 
+        /* ======================================================
+           Body and Layout
+        ====================================================== */
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--background-color);
@@ -29,7 +50,9 @@
             min-height: 100vh;
         }
 
-        /* Sidebar */
+        /* ======================================================
+           Sidebar Styles
+        ====================================================== */
         .sidebar {
             width: 250px;
             background-color: var(--sidebar-color);
@@ -43,6 +66,7 @@
             height: 100%;
         }
 
+        /* Logo Section */
         .logo-section {
             padding-bottom: 25px;
             margin-bottom: 25px;
@@ -65,6 +89,7 @@
             color: #ecf0f1;
         }
 
+        /* Sidebar navigation links */
         .sidebar nav {
             width: 100%;
         }
@@ -85,6 +110,7 @@
             color: var(--primary-color);
         }
 
+        /* Active page styling */
         .sidebar nav a.active-student {
             background-color: var(--active-sidebar-color);
             color: var(--active-sidebar-text);
@@ -97,13 +123,17 @@
             margin-top: -5px !important;
         }
 
-        /* Main Content */
+        /* ======================================================
+           Main Content Styles
+        ====================================================== */
         .main-content {
             margin-left: 250px;
+            /* offset for sidebar */
             flex-grow: 1;
             padding: 40px;
         }
 
+        /* Page Title */
         .page-title {
             text-align: center;
             margin-bottom: 20px;
@@ -123,6 +153,7 @@
             margin-top: 0;
         }
 
+        /* Filter Card */
         .filter-card {
             background-color: var(--card-bg);
             padding: 30px;
@@ -143,6 +174,7 @@
             padding-bottom: 10px;
         }
 
+        /* Filter Grid */
         .filter-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -172,6 +204,7 @@
             outline: none;
         }
 
+        /* Skill Selection Container */
         #skillsContainer {
             margin: 30px 0;
             border: 1px solid #dee2e6;
@@ -179,6 +212,7 @@
             overflow: hidden;
         }
 
+        /* Skill Categories */
         .skill-category {
             border-bottom: 1px solid #e9ecef;
         }
@@ -211,9 +245,11 @@
             transform: rotate(180deg);
         }
 
+        /* Category Content (Checkboxes for skills) */
         .category-content {
             padding: 15px 20px;
             display: none;
+            /* hidden by default */
             background-color: #ffffff;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -234,6 +270,7 @@
             transform: scale(1.1);
         }
 
+        /* Suggest Button */
         .button-group {
             margin-top: 40px;
             display: flex;
@@ -261,7 +298,9 @@
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         }
 
-        /* Results Section */
+        /* ======================================================
+           Results Section
+        ====================================================== */
         #results {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -291,13 +330,12 @@
 
         .card-title {
             color: #6ea8ff;
-            /* pastel blue */
+            /* Pastel blue */
             font-size: 1.3em;
             font-weight: 600;
             margin-top: 0;
             margin-bottom: 5px;
         }
-
 
         .card-meta,
         .card-extra {
@@ -306,7 +344,7 @@
             margin-bottom: 5px;
         }
 
-        /* Circular progress */
+        /* Circular Progress Indicator */
         .circular-progress {
             position: relative;
             width: 80px;
@@ -345,6 +383,9 @@
 </head>
 
 <body>
+    <!-- ======================================================
+         Sidebar Navigation
+    ====================================================== -->
     <div class="sidebar">
         <div class="logo-section">
             <a href="landing_page.html">
@@ -354,14 +395,14 @@
             </a>
         </div>
 
+        <!-- Navigation links -->
         <nav>
             <a href="landing_page.html"><i class="fas fa-home"></i> Home</a>
             <a href="university_analysis.html"><i class="fas fa-chart-line"></i> Analyst Role</a>
             <a href="new_degree_purposals.html" class="submenu-item"><i class="fas fa-lightbulb"></i> New Degree
                 Proposals</a>
             <a href="recommended_degree_plan.html" class="submenu-item"><i class="fas fa-graduation-cap"></i>
-                Recommended Degree
-                Plan</a>
+                Recommended Degree Plan</a>
             <a href="curriculum_enhancement.html" class="submenu-item"><i class="fas fa-layer-group"></i> Curriculum
                 Enhancement</a>
             <a href="student_analysis.html"><i class="fas fa-user-graduate"></i> Student Role</a>
@@ -369,19 +410,23 @@
                     class="fas fa-compass"></i> Personalized Recommendations</a>
             <a href="degree_based_recommendations.html" class="submenu-item"><i class="fas fa-brain"></i> Degree-Based
                 Recommendations</a>
-
         </nav>
     </div>
 
+    <!-- ======================================================
+         Main Content
+    ====================================================== -->
     <div class="main-content">
         <div class="page-title">
             <h1>Student Recommendations</h1>
             <p>Find degrees and courses tailored to your interests</p>
         </div>
 
+        <!-- Filter Card -->
         <div class="filter-card">
             <h3><i class="fas fa-filter"></i> Search Filters</h3>
 
+            <!-- Filter options: Degree type, Country, Language -->
             <div class="filter-grid">
                 <div class="filter-group">
                     <label for="degreeType"><i class="fas fa-graduation-cap"></i> Degree Type:</label>
@@ -403,18 +448,21 @@
                 </div>
             </div>
 
+            <!-- Skill selection container -->
             <h3><i class="fas fa-cogs"></i> Select Skills</h3>
             <div id="skillsContainer"></div>
 
+            <!-- Suggest Button -->
             <div class="button-group">
                 <button id="searchBtn"><i class="fas fa-search"></i> Suggest</button>
             </div>
 
-            <!-- Results appear here -->
+            <!-- Results will be rendered here -->
             <div id="results"></div>
         </div>
     </div>
 
+    <!-- JavaScript file -->
     <script src="personalized_recommendations.js"></script>
 </body>
 

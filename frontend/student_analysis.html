@@ -5,9 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Analyst Dashboard</title>
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
+        /* =============================
+           Root CSS variables for consistent theming
+           ============================= */
         :root {
             --primary-color: #6a9bd8;
             --secondary-color: #6c757d;
@@ -21,15 +25,21 @@
             --font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
+        /* =============================
+           Body and layout
+           ============================= */
         body {
             font-family: var(--font);
             background-color: var(--background-color);
             margin: 0;
             display: flex;
             min-height: 100vh;
+            /* Full viewport height */
         }
 
-        /* Sidebar */
+        /* =============================
+           Sidebar styles
+           ============================= */
         .sidebar {
             width: 250px;
             background-color: var(--sidebar-color);
@@ -43,6 +53,7 @@
             height: 100%;
         }
 
+        /* Logo section inside sidebar */
         .logo-section {
             padding-bottom: 25px;
             margin-bottom: 25px;
@@ -52,6 +63,7 @@
 
         .logo-section a {
             text-decoration: none;
+            /* Remove underline */
         }
 
         .logo-placeholder {
@@ -65,6 +77,7 @@
             color: #ecf0f1;
         }
 
+        /* Navigation links in sidebar */
         .sidebar nav {
             width: 100%;
         }
@@ -80,26 +93,32 @@
             font-size: 1em;
         }
 
+        /* Hover effect for navigation links */
         .sidebar nav a:hover {
             background-color: var(--active-sidebar-color);
             color: var(--primary-color);
         }
 
+        /* Active link styling */
         .sidebar nav a.active-student {
             background-color: var(--active-sidebar-color);
             color: var(--active-sidebar-text);
             font-weight: 600;
         }
 
+        /* Submenu items are indented */
         .submenu-item {
             padding-left: 35px !important;
             font-size: 0.9em !important;
             margin-top: -5px !important;
         }
 
-        /* Main Content */
+        /* =============================
+           Main content area
+           ============================= */
         .main-content {
             margin-left: 250px;
+            /* Leave space for sidebar */
             flex-grow: 1;
             display: flex;
             justify-content: center;
@@ -107,6 +126,7 @@
             padding: 40px;
         }
 
+        /* Container for the selection hub */
         .selection-hub {
             text-align: center;
             width: 100%;
@@ -125,13 +145,16 @@
             margin-bottom: 50px;
         }
 
+        /* Buttons group layout */
         .button-group-large {
             display: flex;
             gap: 50px;
             justify-content: center;
             flex-wrap: wrap;
+            /* Stack on smaller screens */
         }
 
+        /* Individual selection button styling */
         .selection-button {
             flex: 1;
             min-width: 300px;
@@ -149,6 +172,7 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
         }
 
+        /* Hover effect for buttons */
         .selection-button:hover {
             transform: translateY(-10px);
             box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
@@ -156,23 +180,27 @@
             background-color: #d4e4f9;
         }
 
+        /* Icon inside the button */
         .selection-button i {
             font-size: 3.5em;
             margin-bottom: 25px;
             color: var(--primary-color);
         }
 
+        /* Main button text */
         .button-text {
             font-size: 1.6em;
             font-weight: 700;
             margin-bottom: 10px;
         }
 
+        /* Button subtext */
         .button-subtext {
             font-size: 1.05em;
             color: var(--secondary-color);
         }
 
+        /* Responsive design for smaller screens */
         @media (max-width: 900px) {
             .button-group-large {
                 flex-direction: column;
@@ -183,7 +211,9 @@
 </head>
 
 <body>
-    <!-- Sidebar -->
+    <!-- =============================
+         Sidebar navigation
+         ============================= -->
     <div class="sidebar">
         <div class="logo-section">
             <a href="landing_page.html">
@@ -193,14 +223,14 @@
             </a>
         </div>
 
+        <!-- Navigation links -->
         <nav>
             <a href="landing_page.html"><i class="fas fa-home"></i> Home</a>
             <a href="university_analysis.html"><i class="fas fa-chart-line"></i> Analyst Role</a>
             <a href="new_degree_purposals.html" class="submenu-item"><i class="fas fa-lightbulb"></i> New Degree
                 Proposals</a>
             <a href="recommended_degree_plan.html" class="submenu-item"><i class="fas fa-graduation-cap"></i>
-                Recommended Degree
-                Plan</a>
+                Recommended Degree Plan</a>
             <a href="curricumum_enhancement.html" class="submenu-item"><i class="fas fa-layer-group"></i> Curriculum
                 Enhancement</a>
             <a href="student_analysis.html" class="active-student" style="margin-top: 20px;"><i
@@ -212,18 +242,25 @@
         </nav>
     </div>
 
-    <!-- Main Content -->
+    <!-- =============================
+         Main content area: Selection hub
+         ============================= -->
     <div class="main-content">
         <div class="selection-hub">
+            <!-- Page title -->
             <h1><i class="fas fa-user-graduate" style="color: var(--primary-color);"></i> Student Analyst Dashboard</h1>
             <p>Select the recommendation type to get started.</p>
 
+            <!-- Buttons for two types of recommendations -->
             <div class="button-group-large">
+                <!-- Elective course suggestion button -->
                 <button id="btnElectives" class="selection-button">
                     <i class="fas fa-pencil-alt"></i>
                     <span class="button-text">ELECTIVE COURSE SUGGESTION</span>
                     <span class="button-subtext">Based on your current degree and skills.</span>
                 </button>
+
+                <!-- New degree suggestion button -->
                 <button id="btnNewDegrees" class="selection-button">
                     <i class="fas fa-globe-europe"></i>
                     <span class="button-text">NEW DEGREE SUGGESTION</span>
@@ -233,12 +270,16 @@
         </div>
     </div>
 
-    <!-- JS για λειτουργικότητα κουμπιών -->
+    <!-- =============================
+         JavaScript for button functionality
+         ============================= -->
     <script>
+        // Navigate to degree-based recommendations when the first button is clicked
         document.getElementById('btnElectives').addEventListener('click', function () {
             window.location.href = 'degree_based_recommendations.html';
         });
 
+        // Navigate to personalized recommendations when the second button is clicked
         document.getElementById('btnNewDegrees').addEventListener('click', function () {
             window.location.href = 'personalized_recommendations.html';
         });

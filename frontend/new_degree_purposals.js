@@ -1,19 +1,22 @@
-// results_script.js (Ολοκληρωμένη & Λειτουργική Έκδοση)
-// =======================================================
 
 
+// Base URL for the API
 const API_BASE_URL = 'http://localhost:8000';
 
 
 // =======================================================
-// 1. Βοηθητικές Συναρτήσεις 
+// 1. Helper Functions
 // =======================================================
 
-// Μετατροπή score σε χρωματιστό πράσινο bar (παστέλ)
+/**
+ * Convert a score (0–1) into a pastel green color for bars.
+ * @param {number} score - A number between 0 and 1
+ * @returns {string} - CSS rgb color string
+ */
 function scoreToColor(score) {
-    const clampedScore = Math.max(0, Math.min(1, score));
-    const lowR = 223, lowG = 246, lowB = 228; // ανοιχτό πράσινο
-    const highR = 91, highG = 184, highB = 92; // σκούρο πράσινο
+    const clampedScore = Math.max(0, Math.min(1, score)); // Clamp score between 0 and 1
+    const lowR = 223, lowG = 246, lowB = 228; // Light green RGB
+    const highR = 91, highG = 184, highB = 92; // Dark green RGB
 
     const r = Math.round(lowR + (highR - lowR) * clampedScore);
     const g = Math.round(lowG + (highG - lowG) * clampedScore);
@@ -22,20 +25,24 @@ function scoreToColor(score) {
     return `rgb(${r}, ${g}, ${b})`;
 }
 
-// Δημιουργία HTML για τις top skills με heatmap bars
+/**
+ * Generate HTML for a top skills heatmap
+ * @param {Array} topSkills - Array of skills with name and score
+ * @returns {string} - HTML string
+ */
 function generateSkillsHeatmap(topSkills) {
     if (!topSkills || topSkills.length === 0) {
         return `<p style="color: #6c757d; font-size: 0.9em; margin-top: 5px;">
-                  Δε βρέθηκαν συσχετισμένες δεξιότητες.</p>`;
+                  No associated skills found.</p>`;
     }
 
-    // Προσθήκη τίτλου "Top Skills"
+    // Add a "Top Skills" section
     let html = `
         <div class="heatmap-section-full">
             <h5><i class="fas fa-lightbulb"></i> Top Skills</h5>
     `;
 
-    // Δημιουργία bars για κάθε skill
+    // Generate a bar for each skill (max 5 skills)
     html += topSkills.slice(0, 5).map(skill => {
         const skillScore = skill.skill_score || 0;
         const width = Math.round(skillScore * 100);
@@ -53,14 +60,18 @@ function generateSkillsHeatmap(topSkills) {
         `;
     }).join('');
 
-    html += `</div>`; // κλείσιμο heatmap-section-full
+    html += `</div>`; // close heatmap section
     return html;
 }
 
-
-// Δημιουργία metrics bars
+/**
+ * Generate HTML for degree metrics bars
+ * @param {Object} metrics - Object containing metrics values
+ * @returns {string} - HTML string
+ */
 function generateMetricsBars(metrics) {
     if (!metrics) return '';
+
     return `
         <div class="heatmap-section-full">
             <h5><i class="fas fa-chart-pie"></i> Degree Metrics</h5>
@@ -92,9 +103,15 @@ function generateMetricsBars(metrics) {
     `;
 }
 
+
 // =======================================================
-// 2. Event για κουμπί "Generate Course Recommendations"
+// 2. Event Handler: "Generate Course Recommendations" button
 // =======================================================
+
+/**
+ * Redirect to the recommended degree plan page when a button is clicked
+ * @param {Event} event
+ */
 function handleRecommendCoursesClick(event) {
     const button = event.target.closest('button');
     const universityId = button.getAttribute('data-univ-id');
@@ -103,12 +120,17 @@ function handleRecommendCoursesClick(event) {
     window.location.href = `recommended_degree_plan.html?univ_id=${universityId}&degree_name=${encodedDegreeName}`;
 }
 
+
 // =======================================================
-// 3. Εμφάνιση Συστάσεων (Recommendations)
+// 3. Display Recommendations
 // =======================================================
-// =======================================================
-// Βελτιωμένη Συνάρτηση Εμφάνισης Συστάσεων
-// =======================================================
+
+/**
+ * Render recommendation cards in the DOM
+ * @param {Array} recommendations - List of degree/course recommendations
+ * @param {string} type - 'degrees' or 'courses'
+ * @param {string} univId - University ID
+ */
 function displayRecommendations(recommendations, type, univId) {
     const resultsContainer = document.getElementById('recommendation-list');
     const titleElement = document.getElementById('results-title');
@@ -116,29 +138,30 @@ function displayRecommendations(recommendations, type, univId) {
 
     loadingSpinner.style.display = 'none';
 
+    // No results case
     if (!recommendations || !Array.isArray(recommendations) || recommendations.length === 0) {
         titleElement.textContent = `📊 No Results Found`;
         resultsContainer.innerHTML = `<li style="color: #dc3545; padding: 20px; background: #fff; border-left: 8px solid #dc3545; font-size: 1.1em;">
-            ❌ Δεν βρέθηκαν νέες προτάσεις ${type === 'degrees' ? 'πτυχίων' : 'courses'} για αυτό το Πανεπιστήμιο.
+            ❌ No new ${type === 'degrees' ? 'degree' : 'course'} proposals found for this university.
         </li>`;
         return;
     }
 
+    // Build HTML for each recommendation
     const htmlContent = recommendations.map((rec) => {
-        const itemName = rec.degree || rec.degree_title || rec.course_name || 'Άγνωστο Πρόγραμμα';
+        const itemName = rec.degree || rec.degree_title || rec.course_name || 'Unknown Program';
 
-        // Score σε ποσοστά 0–100%
         const scorePercent = rec.score != null ? Math.round(Math.max(1, Math.min(rec.score * 100, 100))) : '—';
         const itemColor = scoreToColor((rec.score || 0));
 
         const degreeType = rec.degree_type || 'BSc/BA';
 
-        // Compatibility και Novelty σε ποσοστά, με safeguard για άδειες δεξιότητες
         const compatibilityPercent = rec.metrics?.compatibility != null ? Math.round(Math.min(Math.max(rec.metrics.compatibility * 100, 0), 100)) : '—';
         const noveltyPercent = rec.metrics?.novelty != null ? Math.round(Math.min(Math.max(rec.metrics.novelty * 100, 0), 100)) : '—';
         const frequencyPercent = rec.metrics?.frequency != null ? Math.round(Math.min(Math.max(rec.metrics.frequency * 100, 0), 100)) : '—';
         const skillEnrichment = rec.metrics?.skill_enrichment != null ? rec.metrics.skill_enrichment : '—';
 
+        // Generate heatmap and metric bars
         const skillsHtml = generateSkillsHeatmap(rec.top_skills) + generateMetricsBars({
             frequency: frequencyPercent,
             compatibility: compatibilityPercent,
@@ -172,18 +195,20 @@ function displayRecommendations(recommendations, type, univId) {
 
     resultsContainer.innerHTML = htmlContent;
 
-    // Event listeners για κουμπιά
+    // Add click event listeners to all "Generate Course Recommendations" buttons
     document.querySelectorAll('.recommend-courses-btn').forEach(button => {
         button.addEventListener('click', handleRecommendCoursesClick);
     });
 }
 
 
-
-
 // =======================================================
-// 4. Κύρια Συνάρτηση: loadRecommendations
+// 4. Main Function: Load Recommendations
 // =======================================================
+
+/**
+ * Load recommendations from API and display them
+ */
 async function loadRecommendations() {
     const params = new URLSearchParams(window.location.search);
     const univId = params.get('univ_id');
@@ -195,12 +220,14 @@ async function loadRecommendations() {
 
     loadingSpinner.style.display = 'block';
 
+    // Validate URL parameters
     if (!univId || !type) {
         infoElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error: University ID or Recommendation Type missing.`;
         loadingSpinner.style.display = 'none';
         return;
     }
 
+    // Attempt to fetch university name for display
     let univName = `University ID: ${univId}`;
     try {
         const univsResponse = await fetch(`${API_BASE_URL}/universities`);
@@ -214,6 +241,7 @@ async function loadRecommendations() {
     infoElement.innerHTML = `<i class="fas fa-info-circle"></i> Find the best programs and courses based on your profile.`;
     titleElement.textContent = `Recommended Degrees for: ${univName}`;
 
+    // Determine API endpoint based on recommendation type
     let endpoint = '';
     if (type === 'degrees') endpoint = `${API_BASE_URL}/recommend/degrees/${univId}`;
     else if (type === 'courses') endpoint = `${API_BASE_URL}/recommendations/university/${univId}`;
@@ -251,5 +279,5 @@ async function loadRecommendations() {
     }
 }
 
-// Εκκίνηση φόρτωσης με το DOMContentLoaded
+// Initialize recommendations on DOM content loaded
 document.addEventListener('DOMContentLoaded', loadRecommendations);

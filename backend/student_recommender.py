@@ -1,28 +1,63 @@
-# =============================================================
-# backend/core3.py
-# -------------------------------------------------------------
-# Περιέχει δύο Recommendation Engines:
-# 1. CourseRecommender        → Προτείνει προγράμματα και μαθήματα
-# 2. CourseRecommenderV4      → Προτείνει electives για συγκεκριμένο πρόγραμμα
-# -------------------------------------------------------------
-# Χρησιμοποιεί TF-IDF & Cosine Similarity για σύγκριση δεξιοτήτων.
-# =============================================================
+"""
+Two recommendation engines:
+1) CourseRecommender  - personalized degree & standalone course recommendations
+2) CourseRecommenderV4 - elective (course option) recommendations for a specific degree program
+
+Both engines use TF-IDF + cosine similarity over skills/courses text and lightweight
+heuristics for scoring and filtering. The original logic is preserved.
+"""
 
 from typing import List, Dict, Any, Optional, Set
 from sqlalchemy.orm import Session
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from collections import defaultdict
 import logging
 import re
 
 from backend.models import DegreeProgram, University, Course, Skill, CourseSkill
 
+# Configure logger for module
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-# =============================================================
-# 1️⃣ CourseRecommender — Personalized Degree & Course Matching
-# =============================================================
+
+# -----------------------------------------------------------------------------
+# Helper: skill normalization
+# -----------------------------------------------------------------------------
+def _normalize_skill(s: str) -> str:
+    """
+    Normalize a skill token to a compact canonical form:
+      - lowercase
+      - strip whitespace
+      - remove uncommon characters but preserve digits, Greek letters,
+        and a few common symbols (+ - . #)
+    Returns empty string for falsy input.
+    """
+    if not s:
+        return ""
+    s = str(s).strip().lower()
+    s = re.sub(r"[^a-z0-9\u0370-\u03FF\u1F00-\u1FFF\s\-\+\.#]", "", s)
+    return s
+
+
+# =============================================================================
+# 1) CourseRecommender
+#    - recommend_personalized: returns degree programs and unlinked courses
+# =============================================================================
 class CourseRecommender:
+    """
+    Recommender for degree programs and standalone (unlinked) courses.
+
+    - recommend_personalized: given user target skills (and optional filters),
+      returns a ranked list of degree programs and standalone courses that
+      best match the skills using TF-IDF + small filter-based bonuses.
+    """
+
     def __init__(self, db: Session):
+        """
+        Initialize with a SQLAlchemy session (db).
+        """
         self.db = db
 
     def recommend_personalized(
@@ -33,16 +68,44 @@ class CourseRecommender:
         degree_type: Optional[str] = None,
         top_n: int = 10,
     ) -> Dict[str, Any]:
-        """Return personalized recommendations for degrees and free courses."""
+        """
+        Return personalized recommendations for degree programs and standalone courses.
 
-        # --- Normalize user skills ---
+        Parameters
+        ----------
+        target_skills : List[str]
+            List of user's target skills (strings).
+        language : Optional[str]
+            Optional language filter (case-insensitive substring match).
+        country : Optional[str]
+            Optional university country filter (case-insensitive substring match).
+        degree_type : Optional[str]
+            Optional degree type filter (case-insensitive substring match).
+        top_n : int
+            Maximum number of items to return per list.
+
+        Returns
+        -------
+        dict
+            {
+                "recommended_programs": [...],
+                "recommended_unlinked_courses": [...],
+                "skills_by_category": {...}
+            }
+            or {"message": "..."} when no data is available or input invalid.
+        """
+
+        # ---------------------------
+        # Normalize and validate input
+        # ---------------------------
         target_skills_norm = [s.lower().strip() for s in target_skills if s]
         user_text = " ".join(target_skills_norm)
-
         if not user_text:
-            return {"message": "Παρακαλώ εισάγετε τουλάχιστον μία δεξιότητα."}
+            return {"message": "Please provide at least one skill."}
 
-        # --- Gather degrees ---
+        # ---------------------------
+        # Query degree programs with optional filters
+        # ---------------------------
         query = self.db.query(DegreeProgram).join(University)
         if language:
             query = query.filter(DegreeProgram.language.ilike(f"%{language}%"))
@@ -53,10 +116,13 @@ class CourseRecommender:
 
         programs = query.all()
         if not programs:
-            return {"message": "Δεν βρέθηκαν σχετικά προγράμματα."}
+            return {"message": "No matching programs were found."}
 
-        # --- Build program skill profiles ---
-        program_texts, program_objs = [], []
+        # ---------------------------
+        # Build program skill texts for TF-IDF
+        # ---------------------------
+        program_texts: List[str] = []
+        program_objs: List[DegreeProgram] = []
         for prog in programs:
             skills = self._get_program_skills(prog.program_id)
             if not skills:
@@ -65,22 +131,28 @@ class CourseRecommender:
             program_objs.append(prog)
 
         if not program_texts:
-            return {"message": "Δεν υπάρχουν skills σε κανένα πρόγραμμα."}
+            return {"message": "No skills are recorded for any matching program."}
 
-        # --- TF-IDF Similarity ---
+        # ---------------------------
+        # Compute TF-IDF similarity between user skills and programs
+        # ---------------------------
         vectorizer = TfidfVectorizer()
         try:
-            all_docs = [user_text] + program_texts
-            vectors = vectorizer.fit_transform(all_docs)
+            vectors = vectorizer.fit_transform([user_text] + program_texts)
             sims = cosine_similarity(vectors[0:1], vectors[1:]).flatten()
         except Exception as e:
-            print(f"TF-IDF vectorization error: {e}")
+            # If TF-IDF fails, fall back to zero similarities
+            logger.exception("TF-IDF vectorization error for degree programs: %s", e)
             sims = [0.0] * len(program_objs)
 
-        # --- Score programs ---
-        scored_programs = []
+        # ---------------------------
+        # Score and sort programs
+        # ---------------------------
+        scored_programs: List[Dict[str, Any]] = []
         for i, prog in enumerate(program_objs):
-            score = sims[i]
+            score = float(sims[i]) if i < len(sims) else 0.0
+
+            # Small bonuses when filters align exactly (keeps behavior of original code)
             if language and prog.language and prog.language.lower() == language.lower():
                 score += 0.05
             if degree_type and prog.degree_type and prog.degree_type.lower() == degree_type.lower():
@@ -88,52 +160,59 @@ class CourseRecommender:
             if country and prog.university.country and prog.university.country.lower() == country.lower():
                 score += 0.05
 
+            # Determine a human-friendly degree name. Original code attempted EL/EN selection.
+            degree_name = "N/A"
+            if prog.degree_titles:
+                if isinstance(prog.degree_titles, dict):
+                    # prefer Greek ('el') then English ('en'), else fallback to first available
+                    degree_name = prog.degree_titles.get("el") or prog.degree_titles.get("en") or str(prog.degree_titles)
+                else:
+                    degree_name = str(prog.degree_titles)
+
             scored_programs.append({
                 "program_id": prog.program_id,
-                "degree_name": (
-    (prog.degree_titles.get("el") if isinstance(prog.degree_titles, dict) and prog.degree_titles.get("el")
-     else prog.degree_titles.get("en") if isinstance(prog.degree_titles, dict) and prog.degree_titles.get("en")
-     else str(prog.degree_titles))
-    if prog.degree_titles else "N/A"
-),
-
-                "university": prog.university.university_name,
+                "degree_name": degree_name,
+                "university": getattr(prog.university, "university_name", None),
                 "language": prog.language,
-                "country": prog.university.country,
+                "country": getattr(prog.university, "country", None),
                 "degree_type": prog.degree_type,
                 "score": round(score, 3)
             })
 
         scored_programs = sorted(scored_programs, key=lambda x: x["score"], reverse=True)[:top_n]
 
-        # --- Unlinked courses ---
+        # ---------------------------
+        # Recommend standalone (unlinked) courses
+        # ---------------------------
         unlinked_courses = self.db.query(Course).filter(Course.program_id == None).all()
-        course_texts, course_objs = [], []
+        course_texts: List[str] = []
+        course_objs: List[Course] = []
         for c in unlinked_courses:
             skills = self._get_course_skills(c.course_id)
             if skills:
                 course_texts.append(" ".join([s.lower() for s in skills]))
                 course_objs.append(c)
 
-        unlinked_recs = []
+        unlinked_recs: List[Dict[str, Any]] = []
         if course_texts:
             try:
-                all_docs = [user_text] + course_texts
-                vectors = vectorizer.fit_transform(all_docs)
+                vectors = vectorizer.fit_transform([user_text] + course_texts)
                 sims = cosine_similarity(vectors[0:1], vectors[1:]).flatten()
                 for i, c in enumerate(course_objs):
                     unlinked_recs.append({
                         "course_id": c.course_id,
                         "lesson_name": c.lesson_name,
-                        "university": c.university.university_name,
-                        "score": round(sims[i], 3)
+                        "university": getattr(c.university, "university_name", None),
+                        "score": round(float(sims[i]) if i < len(sims) else 0.0, 3)
                     })
                 unlinked_recs = sorted(unlinked_recs, key=lambda x: x["score"], reverse=True)[:top_n]
             except Exception as e:
-                print(f"TF-IDF error for unlinked courses: {e}")
+                logger.exception("TF-IDF error for unlinked courses: %s", e)
                 unlinked_recs = []
 
-        # --- Group skills alphabetically by category ---
+        # ---------------------------
+        # Group user skills by category for presentation
+        # ---------------------------
         grouped_skills = self._group_skills_by_category(target_skills_norm)
 
         return {
@@ -142,110 +221,104 @@ class CourseRecommender:
             "skills_by_category": grouped_skills
         }
 
-    # ========================
-    # Helper Methods
-    # ========================
+    # -------------------------------------------------------------------------
+    # Helper: extract all skill names from a program's courses
+    # -------------------------------------------------------------------------
     def _get_program_skills(self, program_id: int) -> List[str]:
+        """
+        Return a list of unique skill names referenced by the courses of the given program.
+        Returns an empty list when the program isn't found or there are no skills.
+        """
         program = self.db.query(DegreeProgram).filter_by(program_id=program_id).first()
         if not program:
             return []
 
-        skills_set = set()
-        for course in program.courses:
-            for cs in getattr(course, "skills", []):
+        skills_set: Set[str] = set()
+        for course in getattr(program, "courses", []) or []:
+            for cs in getattr(course, "skills", []) or []:
                 try:
-                    skills_set.add(cs.skill.skill_name)
+                    skill_name = getattr(cs.skill, "skill_name", None)
+                    if skill_name:
+                        skills_set.add(skill_name)
                 except Exception:
+                    # Defensive: skip malformed relationships
                     continue
         return list(skills_set)
 
+    # -------------------------------------------------------------------------
+    # Helper: extract skill names attached to a course (CourseSkill relation)
+    # -------------------------------------------------------------------------
     def _get_course_skills(self, course_id: int) -> List[str]:
-        skills = []
+        """
+        Return a list of skill names for a given course_id by inspecting CourseSkill rows.
+        """
+        skills: List[str] = []
         try:
-            for cs in self.db.query(CourseSkill).filter_by(course_id=course_id).all():
-                if hasattr(cs, "skill") and hasattr(cs.skill, "skill_name"):
+            entries = self.db.query(CourseSkill).filter_by(course_id=course_id).all()
+            for cs in entries:
+                if hasattr(cs, "skill") and getattr(cs.skill, "skill_name", None):
                     skills.append(cs.skill.skill_name)
         except Exception:
+            # Defensive: return empty on DB errors
             pass
         return skills
 
+    # -------------------------------------------------------------------------
+    # Helper: group skills by category (presentation)
+    # -------------------------------------------------------------------------
     def _group_skills_by_category(self, skills: List[str]) -> Dict[str, List[str]]:
-        grouped = {}
+        """
+        Group skill names by their stored category. If a skill's category is not present,
+        group under 'Other'. Matching is attempted using case-insensitive contains.
+        """
+        grouped: Dict[str, List[str]] = {}
         for s in skills:
             try:
+                # Find a skill row matching the token (case-insensitive contains)
                 skill_obj = self.db.query(Skill).filter(Skill.skill_name.ilike(f"%{s}%")).first()
-                cat = "Άλλες"
+                category = "Other"
                 if skill_obj:
+                    # Skill.categories may be a dict or another structure; attempt sensible extraction
                     if isinstance(skill_obj.categories, dict):
-                        cat = skill_obj.categories.get("preferredLabel", "Άλλες")
+                        category = skill_obj.categories.get("preferredLabel", "Other")
                     elif skill_obj.categories:
-                        cat = str(skill_obj.categories)
-                grouped.setdefault(cat, []).append(s)
+                        category = str(skill_obj.categories)
+                grouped.setdefault(category, []).append(s)
             except Exception:
-                grouped.setdefault("Άλλες", []).append(s)
-        for k in grouped:
+                grouped.setdefault("Other", []).append(s)
+
+        # Deduplicate and sort each category list
+        for k in list(grouped.keys()):
             grouped[k] = sorted(set(grouped[k]), key=lambda x: x.lower())
-        return dict(sorted(grouped.items()))
+
+        # Return categories ordered alphabetically
+        return dict(sorted(grouped.items(), key=lambda x: x[0].lower()))
 
 
-# =============================================================
-# 2️⃣ CourseRecommenderV4 — Electives Recommendation per Program
-# =============================================================
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-
-def _normalize_skill(s: str) -> str:
-    """Καθαρίζει και κανονικοποιεί ένα skill token."""
-    if not s:
-        return ""
-    s = str(s).strip().lower()
-    s = re.sub(r"[^a-z0-9\u0370-\u03FF\u1F00-\u1FFF\s\-\+\.#]", "", s)
-    return s
-
-
+# =============================================================================
+# 2) CourseRecommenderV4
+#    - recommend_electives_for_degree_enhanced: return elective course suggestions
+# =============================================================================
 class CourseRecommenderV4:
-    """Προτείνει μαθήματα επιλογής (electives) για συγκεκριμένο πρόγραμμα & πανεπιστήμιο."""
+    """
+    Elective recommender for a given degree program at a specific university.
+
+    Scoring combines:
+      - TF-IDF semantic similarity between user skills and course skill text
+      - Overlap ratio between user skills and course skills
+
+    Final score = tfidf_weight * tfidf_score + overlap_weight * overlap_ratio
+    """
 
     def __init__(self, db: Session, tfidf_weight: float = 0.6, overlap_weight: float = 0.4):
+        """
+        Initialize with a SQLAlchemy session and optional weights for combining signals.
+        Weights are normalized so that their sum equals 1.0 when possible.
+        """
         self.db = db
         total = (tfidf_weight or 0.0) + (overlap_weight or 0.0)
         if total <= 0:
-            self.tfidf_weight = 0.6
-            self.overlap_weight = 0.4
-        else:
-            self.tfidf_weight = tfidf_weight / total
-            self.overlap_weight = overlap_weight / total
-
-    # =============================================================
-# 2️⃣ CourseRecommenderV4 — Electives Recommendation per Program
-# =============================================================
-import logging
-import re
-from typing import List, Dict, Any, Set
-from sqlalchemy.orm import Session
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-
-
-def _normalize_skill(s: str) -> str:
-    """Καθαρίζει και κανονικοποιεί ένα skill token."""
-    if not s:
-        return ""
-    s = str(s).strip().lower()
-    s = re.sub(r"[^a-z0-9\u0370-\u03FF\u1F00-\u1FFF\s\-\+\.#]", "", s)
-    return s
-
-
-class CourseRecommenderV4:
-    """Προτείνει μαθήματα επιλογής (electives) για συγκεκριμένο πρόγραμμα & πανεπιστήμιο."""
-
-    def __init__(self, db: Session, tfidf_weight: float = 0.6, overlap_weight: float = 0.4):
-        self.db = db
-        total = (tfidf_weight or 0.0) + (overlap_weight or 0.0)
-        if total <= 0:
+            # Defaults if invalid weights provided
             self.tfidf_weight = 0.6
             self.overlap_weight = 0.4
         else:
@@ -260,103 +333,143 @@ class CourseRecommenderV4:
         top_n: int = 5,
         min_overlap_ratio: float = 0.1,
     ) -> Dict[str, Any]:
-        """Προτείνει electives για συγκεκριμένο πρόγραμμα σπουδών βάσει skills χρήστη."""
+        """
+        Recommend elective courses for a program.
 
-        # --- Normalize user skills ---
+        Parameters
+        ----------
+        univ_id : int
+            University id where the program is offered.
+        program_id : int
+            Program id for which to recommend electives.
+        target_skills : List[str]
+            User-provided skills used as the target profile.
+        top_n : int
+            Maximum number of electives to return.
+        min_overlap_ratio : float
+            Minimum overlap ratio threshold to consider a course (0..1).
+
+        Returns
+        -------
+        dict
+            {
+                "recommended_electives": [...],
+                "meta": {...}
+            }
+            or {"message": "..."} on error or no results.
+        """
+
+        # ---------------------------
+        # Normalize user skills
+        # ---------------------------
         user_skills_norm = [_normalize_skill(s) for s in (target_skills or []) if _normalize_skill(s)]
         user_skills_set: Set[str] = set(user_skills_norm)
         if not user_skills_set:
-            return {"message": "Παρακαλώ εισάγετε τουλάχιστον μία (έγκυρη) δεξιότητα."}
-
+            return {"message": "Please provide at least one valid skill."}
         user_text = " ".join(sorted(user_skills_set))
 
-        # --- Βρες το πρόγραμμα σπουδών ---
+        # ---------------------------
+        # Locate the degree program
+        # ---------------------------
         program = self.db.query(DegreeProgram).filter_by(program_id=program_id, university_id=univ_id).first()
         if not program:
-            return {"message": "Δεν βρέθηκε το πρόγραμμα σπουδών για αυτό το πανεπιστήμιο."}
+            return {"message": "Degree program not found for this university."}
 
-        # --- Filter electives ---
-        elective_courses = []
+        # ---------------------------
+        # Identify elective courses from the program
+        # ---------------------------
+        elective_courses: List[Course] = []
         for c in getattr(program, "courses", []) or []:
             mand_opt = getattr(c, "mand_opt_list", None)
             is_optional = False
             if isinstance(mand_opt, str) and "optional" in mand_opt.lower():
                 is_optional = True
             elif isinstance(mand_opt, (list, tuple, set)):
-                for v in mand_opt:
-                    if "optional" in str(v).lower():
-                        is_optional = True
-                        break
+                is_optional = any("optional" in str(v).lower() for v in mand_opt)
             if is_optional:
                 elective_courses.append(c)
 
         if not elective_courses:
-            return {"message": "Δεν υπάρχουν μαθήματα επιλογής για αυτό το πρόγραμμα."}
+            return {"message": "No elective courses were found for this program."}
 
-        # --- Prepare course skill data ---
-        course_objs, course_skill_texts, course_skill_sets, course_raw_skills = [], [], [], []
+        # ---------------------------
+        # Extract and normalize skills for each elective
+        # ---------------------------
+        course_objs: List[Course] = []
+        course_skill_sets: List[Set[str]] = []
+        course_skill_texts: List[str] = []
+        course_raw_skills: List[List[str]] = []
 
         for c in elective_courses:
-            skill_names = []
+            raw_skill_names: List[str] = []
+
+            # support two possible relationship shapes: courseskills or skills
             if hasattr(c, "courseskills"):
                 for cs in getattr(c, "courseskills") or []:
                     if hasattr(cs, "skill") and getattr(cs.skill, "skill_name", None):
-                        skill_names.append(str(cs.skill.skill_name))
+                        raw_skill_names.append(str(cs.skill.skill_name))
             elif hasattr(c, "skills"):
                 for cs in getattr(c, "skills") or []:
                     if hasattr(cs, "skill") and getattr(cs.skill, "skill_name", None):
-                        skill_names.append(str(cs.skill.skill_name))
+                        raw_skill_names.append(str(cs.skill.skill_name))
                     elif getattr(cs, "skill_name", None):
-                        skill_names.append(str(cs.skill_name))
-            if not skill_names:
+                        # Some models store skill_name directly on the relation
+                        raw_skill_names.append(str(cs.skill_name))
+
+            if not raw_skill_names:
                 continue
 
-            normalized = [_normalize_skill(s) for s in skill_names if _normalize_skill(s)]
+            normalized = [_normalize_skill(s) for s in raw_skill_names if _normalize_skill(s)]
             if not normalized:
                 continue
 
             course_objs.append(c)
+            course_raw_skills.append(sorted(set(raw_skill_names)))
             course_skill_sets.append(set(normalized))
             course_skill_texts.append(" ".join(normalized))
-            course_raw_skills.append(sorted(set(skill_names)))
 
         if not course_objs:
-            return {"message": "Δεν βρέθηκαν skills στα μαθήματα επιλογής αυτού του προγράμματος."}
+            return {"message": "No skills found on the elective courses of this program."}
 
-        # --- TF-IDF Similarity ---
+        # ---------------------------
+        # TF-IDF similarity between user skills and course skill text
+        # ---------------------------
         try:
             vectorizer = TfidfVectorizer()
             docs = [user_text] + course_skill_texts
             vectors = vectorizer.fit_transform(docs)
             tfidf_scores = cosine_similarity(vectors[0:1], vectors[1:]).flatten().tolist()
         except Exception as e:
-            logger.exception("TF-IDF vectorization failed: %s", e)
+            logger.exception("TF-IDF vectorization failed for electives: %s", e)
             tfidf_scores = [0.0] * len(course_objs)
 
-        # --- Compute final scores (TF-IDF + Overlap only) ---
-        scored = []
+        # ---------------------------
+        # Compute final scores and reasons
+        # ---------------------------
+        scored: List[Dict[str, Any]] = []
         for i, c in enumerate(course_objs):
             course_set = course_skill_sets[i]
             matched = sorted(list(user_skills_set & course_set))
             missing = sorted(list(course_set - user_skills_set))
-            overlap_ratio = len(matched) / len(course_set | user_skills_set) if (course_set | user_skills_set) else 0.0
+            union_set = course_set | user_skills_set
+            overlap_ratio = (len(matched) / len(union_set)) if union_set else 0.0
             tfidf_score = float(tfidf_scores[i]) if i < len(tfidf_scores) else 0.0
 
-            # Φιλτράρισμα χαμηλής συνάφειας
+            # filter out ultra-low relevance candidates
             if overlap_ratio < min_overlap_ratio and tfidf_score < 0.01:
                 continue
 
-            # Τελικό σκορ
+            # combine signals
             final_score = (self.tfidf_weight * tfidf_score) + (self.overlap_weight * overlap_ratio)
             final_score = max(0.0, min(1.0, final_score))
 
-            # Λόγοι για scoring
-            reason = []
+            # human-friendly reason text describing why the course scored
+            reason_parts: List[str] = []
             if matched:
-                reason.append(f"Κοινές δεξιότητες: {len(matched)} ({', '.join(matched[:5])})")
-            if tfidf_score > 0.0:
-                reason.append(f"Semantic similarity: {round(tfidf_score,3)}")
-            reason_text = "; ".join(reason) if reason else "Χαμηλή συνάφεια."
+                reason_parts.append(f"Common skills: {len(matched)} ({', '.join(matched[:5])})")
+            if tfidf_score > 0:
+                reason_parts.append(f"Semantic similarity: {round(tfidf_score, 3)}")
+            reason_text = "; ".join(reason_parts) if reason_parts else "Low relevance."
 
             scored.append({
                 "course_id": getattr(c, "course_id", None),
@@ -371,11 +484,10 @@ class CourseRecommenderV4:
                 "skills": course_raw_skills[i],
             })
 
-       
-        # --- Keep only courses with final_score >= 0.1 ---
+        # ---------------------------
+        # Filter, sort and limit to top_n
+        # ---------------------------
         scored_filtered = [c for c in scored if c["final_score"] >= 0.1]
-
-        # --- Sort by final score and limit to top_n ---
         scored_sorted = sorted(scored_filtered, key=lambda x: x["final_score"], reverse=True)[:max(1, top_n)]
 
         return {

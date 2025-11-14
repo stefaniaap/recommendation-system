@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edu Recommender - Role Selection</title>
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
@@ -32,6 +33,7 @@
             /* Active sidebar text color */
         }
 
+        /* Base body styling */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--background-color);
@@ -63,9 +65,9 @@
             width: 100%;
         }
 
+        /* Make logo clickable without underline */
         .logo-section a {
             text-decoration: none;
-            /* Make logo clickable without underline */
         }
 
         .logo-placeholder {
@@ -80,11 +82,11 @@
             color: #ecf0f1;
         }
 
+        /* Sidebar navigation links */
         .sidebar nav {
             width: 100%;
         }
 
-        /* Sidebar links */
         .sidebar nav a {
             color: #ecf0f1;
             text-decoration: none;
@@ -99,20 +101,20 @@
             box-sizing: border-box;
         }
 
-        /* Hover state */
+        /* Hover effect for links */
         .sidebar nav a:hover {
             background-color: var(--active-sidebar-color);
             color: var(--primary-color);
         }
 
-        /* Active link */
+        /* Active page link styling */
         .sidebar nav a.active-landing {
             background-color: var(--active-sidebar-color);
             color: var(--active-sidebar-text);
             font-weight: 600;
         }
 
-        /* Submenu items */
+        /* Submenu indentation styling */
         .submenu-item {
             padding-left: 35px !important;
             font-size: 0.9em !important;
@@ -130,6 +132,7 @@
             padding: 20px;
         }
 
+        /* Role selection container (center card) */
         .role-selection-container {
             width: 100%;
             max-width: 900px;
@@ -152,13 +155,14 @@
             margin-bottom: 40px;
         }
 
-        /* Role cards */
+        /* Container for role cards */
         .role-cards {
             display: flex;
             gap: 30px;
             justify-content: center;
         }
 
+        /* Individual role card styling */
         .role-card {
             flex: 1;
             padding: 30px 20px;
@@ -170,6 +174,7 @@
             background-color: #f8f9fa;
         }
 
+        /* Hover effect for role cards */
         .role-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(106, 155, 216, 0.3);
@@ -184,7 +189,6 @@
 
         .role-card h2 {
             font-size: 1.6em;
-            color: var(--primary-color);
             margin-top: 15px;
         }
 
@@ -202,7 +206,11 @@
             color: var(--primary-color);
         }
 
-        /* University card (green accent) */
+        #student-card h2 {
+            color: var(--primary-color);
+        }
+
+        /* University / Analyst card (green accent) */
         #university-card {
             border-left: 5px solid var(--analyst-color);
         }
@@ -222,6 +230,7 @@
          SIDEBAR NAVIGATION
     --------------------------- -->
     <div class="sidebar">
+        <!-- Logo Section -->
         <div class="logo-section">
             <a href="landing_page.html">
                 <div class="logo-placeholder">
@@ -230,6 +239,7 @@
             </a>
         </div>
 
+        <!-- Navigation Links -->
         <nav>
             <!-- Home -->
             <a href="landing_page.html" class="active-landing">
@@ -265,15 +275,17 @@
     </div>
 
     <!-- ---------------------------
-         MAIN CONTENT: ROLE SELECTION
+         MAIN CONTENT: ROLE SELECTION CARDS
     --------------------------- -->
     <div class="main-content">
         <div class="role-selection-container">
+            <!-- Page heading -->
             <h1>Welcome to Edu Recommender</h1>
             <p>Select your role to access the relevant recommendation and analysis systems:</p>
 
+            <!-- Cards for role selection -->
             <div class="role-cards">
-                <!-- Student role card -->
+                <!-- Student / User role card -->
                 <a href="student_analysis.html" id="student-card" class="role-card">
                     <i class="fas fa-user-graduate"></i>
                     <h2>Student / User</h2>

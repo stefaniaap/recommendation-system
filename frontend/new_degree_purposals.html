@@ -1,28 +1,49 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recommended Results</title>
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
     <style>
+        /* ---------------------------
+           CSS Variables / Theme Colors
+        --------------------------- */
         :root {
             --primary-color: #a3c4f3;
+            /* Light blue for primary highlights */
             --analyst-color: #91d5a1;
+            /* Green for analyst cards and accents */
             --analyst-light-color: #c3e6cb;
+            /* Light green for backgrounds */
             --secondary-color: #b0b0b0;
+            /* Grey for secondary text */
             --info-blue-color: #a0d8ef;
+            /* Blue for info buttons */
             --sidebar-color: #34495e;
+            /* Sidebar background */
             --background-color: #fdfdfd;
+            /* Page background */
             --card-background: #ffffff;
+            /* Card background */
             --border-radius: 12px;
+            /* Rounded corners for cards */
             --shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+            /* Card shadow */
             --pastel-green: #c1f0c1;
+            /* Light green for bars or highlights */
             --bar-low: #dff6e4;
+            /* Low value bar background */
             --bar-high: #5cb85c;
+            /* High value bar color */
         }
 
+        /* ---------------------------
+           BASE BODY STYLING
+        --------------------------- */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--background-color);
@@ -32,13 +53,16 @@
             min-height: 100vh;
         }
 
-        /* ------------------ SIDEBAR ------------------ */
+        /* ---------------------------
+           SIDEBAR STYLING
+        --------------------------- */
         .sidebar {
             width: 250px;
             background-color: var(--sidebar-color);
             color: #ecf0f1;
             padding: 20px;
             position: fixed;
+            /* Fixed sidebar */
             top: 0;
             left: 0;
             height: 100%;
@@ -48,6 +72,7 @@
             box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
         }
 
+        /* Logo section at the top of sidebar */
         .logo-section {
             padding-bottom: 25px;
             margin-bottom: 25px;
@@ -55,6 +80,7 @@
             width: 100%;
         }
 
+        /* Logo link styling */
         .logo-section a {
             text-decoration: none;
         }
@@ -68,8 +94,10 @@
 
         .logo-placeholder span {
             color: #ecf0f1;
+            /* Highlight "Recommender" in white */
         }
 
+        /* Sidebar navigation links */
         .sidebar nav {
             width: 100%;
         }
@@ -85,26 +113,32 @@
             font-weight: 500;
         }
 
+        /* Hover effect for sidebar links */
         .sidebar nav a:hover {
             background-color: rgba(255, 255, 255, 0.1);
             color: var(--primary-color);
         }
 
+        /* Active page link styling */
         .sidebar nav a.active-landing {
             background-color: rgba(255, 255, 255, 0.1);
             color: white;
             font-weight: 600;
         }
 
+        /* Submenu items indentation */
         .submenu-item {
             padding-left: 35px !important;
             font-size: 0.9em !important;
             margin-top: -5px !important;
         }
 
-        /* ------------------ MAIN CONTENT ------------------ */
+        /* ---------------------------
+           MAIN CONTENT STYLING
+        --------------------------- */
         .main-content {
             margin-left: 250px;
+            /* Space for fixed sidebar */
             flex-grow: 1;
             padding: 25px;
             display: flex;
@@ -117,6 +151,7 @@
             text-align: center;
         }
 
+        /* Page header section */
         .page-header {
             text-align: center;
             margin-bottom: 25px;
@@ -138,6 +173,7 @@
             opacity: 0.85;
         }
 
+        /* Results section title */
         #results-title {
             font-size: 1.2em;
             margin-top: 25px;
@@ -146,35 +182,41 @@
             margin-bottom: 15px;
         }
 
-        /* ✅ ΔΙΟΡΘΩΣΗ: αφαίρεση του εικονιδίου μπροστά από το κείμενο */
+        /* Remove default pseudo-element from university info */
         #university-info::before {
             content: none !important;
             display: none !important;
         }
 
+        /* Recommendation list container */
         #recommendation-list {
             list-style: none;
             padding: 0;
             display: flex;
             flex-direction: column;
             gap: 25px;
+            /* Space between cards */
         }
 
+        /* Individual recommendation card */
         .recommendation-card {
             background-color: var(--card-background);
             border: 1px solid #e0e0e0;
             border-left: 8px solid var(--analyst-color);
+            /* Highlight left border */
             border-radius: var(--border-radius);
             padding: 20px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
+        /* Card hover effect */
         .recommendation-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
         }
 
+        /* Card header: degree name and type */
         .card-header {
             display: flex;
             justify-content: space-between;
@@ -202,6 +244,7 @@
             margin-left: 10px;
         }
 
+        /* Badge to display score or rating */
         .score-badge {
             flex-shrink: 0;
             color: white;
@@ -213,6 +256,7 @@
             text-align: center;
         }
 
+        /* Full-width card content */
         .card-content-full-width {
             display: flex;
             flex-direction: column;
@@ -220,6 +264,7 @@
             margin-top: 15px;
         }
 
+        /* Heatmap / skill visualization section */
         .heatmap-section-full {
             width: 100%;
             background-color: #f8fafc;
@@ -237,6 +282,7 @@
             margin-bottom: 15px;
         }
 
+        /* Skill bar styling */
         .skill-bar p {
             display: flex;
             justify-content: space-between;
@@ -259,11 +305,13 @@
             background-color: var(--bar-high);
         }
 
+        /* Centered action section */
         .action-section-centered {
             text-align: center;
             padding-bottom: 10px;
         }
 
+        /* Recommendation buttons */
         .recommend-courses-btn {
             color: white;
             border: none;
@@ -277,6 +325,7 @@
             background-color: var(--info-blue-color);
         }
 
+        /* Green variant button */
         .green-btn {
             background-color: var(--analyst-color);
             box-shadow: 0 3px 8px rgba(145, 213, 161, 0.4);
@@ -292,6 +341,7 @@
             transform: translateY(-2px);
         }
 
+        /* Spinner animation for loading */
         .spinner {
             display: block;
             width: 40px;
@@ -309,6 +359,7 @@
             }
         }
 
+        /* Responsive styling for small screens */
         @media (max-width: 720px) {
             .sidebar {
                 position: relative;
@@ -326,7 +377,11 @@
 </head>
 
 <body>
+    <!-- ---------------------------
+         SIDEBAR NAVIGATION
+    --------------------------- -->
     <div class="sidebar">
+        <!-- Logo Section -->
         <div class="logo-section">
             <a href="landing_page.html">
                 <div class="logo-placeholder">
@@ -335,6 +390,7 @@
             </a>
         </div>
 
+        <!-- Navigation links -->
         <nav>
             <a href="landing_page.html">
                 <i class="fas fa-home"></i> Home
@@ -363,20 +419,32 @@
         </nav>
     </div>
 
+    <!-- ---------------------------
+         MAIN CONTENT: RECOMMENDATION RESULTS
+    --------------------------- -->
     <div class="main-content">
         <div class="container">
+            <!-- Page header -->
             <div class="page-header">
-                <h1 class="page-header-title"><i class="fas fa-university" style="color: var(--analyst-color);"></i>
-                    University Recommendations</h1>
+                <h1 class="page-header-title">
+                    <i class="fas fa-university" style="color: var(--analyst-color);"></i>
+                    University Recommendations
+                </h1>
                 <p id="university-info">Find the best programs and courses based on your profile.</p>
                 <br>
                 <p id="results-title">Recommended Degrees for: Politecnico di Milano (Italy)</p>
                 <br>
             </div>
+
+            <!-- Loading spinner (hidden by default) -->
             <div id="loading-spinner" class="spinner" style="display:none;"></div>
+
+            <!-- List of recommendation cards -->
             <ul id="recommendation-list"></ul>
         </div>
     </div>
+
+    <!-- Link to JavaScript that populates recommendations dynamically -->
     <script src="new_degree_purposals.js"></script>
 </body>
 
