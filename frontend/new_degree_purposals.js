@@ -1,7 +1,7 @@
 // results_script.js (Ολοκληρωμένη & Λειτουργική Έκδοση)
 // =======================================================
 
-//const API_BASE_URL = 'http://127.0.0.1:8000';
+
 const API_BASE_URL = 'http://localhost:8000';
 
 
@@ -106,6 +106,9 @@ function handleRecommendCoursesClick(event) {
 // =======================================================
 // 3. Εμφάνιση Συστάσεων (Recommendations)
 // =======================================================
+// =======================================================
+// Βελτιωμένη Συνάρτηση Εμφάνισης Συστάσεων
+// =======================================================
 function displayRecommendations(recommendations, type, univId) {
     const resultsContainer = document.getElementById('recommendation-list');
     const titleElement = document.getElementById('results-title');
@@ -121,14 +124,27 @@ function displayRecommendations(recommendations, type, univId) {
         return;
     }
 
-    const htmlContent = recommendations.map((rec, index) => {
+    const htmlContent = recommendations.map((rec) => {
         const itemName = rec.degree || rec.degree_title || rec.course_name || 'Άγνωστο Πρόγραμμα';
-        let score = rec.score ? rec.score.toFixed(3) : 'N/A';
-        let degreeType = rec.degree_type || 'BSc/BA';
-        let itemColor = scoreToColor(rec.score || 0);
-        let showButton = true;
 
-        let skillsHtml = generateSkillsHeatmap(rec.top_skills) + generateMetricsBars(rec.metrics);
+        // Score σε ποσοστά 0–100%
+        const scorePercent = rec.score != null ? Math.round(Math.max(1, Math.min(rec.score * 100, 100))) : '—';
+        const itemColor = scoreToColor((rec.score || 0));
+
+        const degreeType = rec.degree_type || 'BSc/BA';
+
+        // Compatibility και Novelty σε ποσοστά, με safeguard για άδειες δεξιότητες
+        const compatibilityPercent = rec.metrics?.compatibility != null ? Math.round(Math.min(Math.max(rec.metrics.compatibility * 100, 0), 100)) : '—';
+        const noveltyPercent = rec.metrics?.novelty != null ? Math.round(Math.min(Math.max(rec.metrics.novelty * 100, 0), 100)) : '—';
+        const frequencyPercent = rec.metrics?.frequency != null ? Math.round(Math.min(Math.max(rec.metrics.frequency * 100, 0), 100)) : '—';
+        const skillEnrichment = rec.metrics?.skill_enrichment != null ? rec.metrics.skill_enrichment : '—';
+
+        const skillsHtml = generateSkillsHeatmap(rec.top_skills) + generateMetricsBars({
+            frequency: frequencyPercent,
+            compatibility: compatibilityPercent,
+            novelty: noveltyPercent,
+            skill_enrichment: skillEnrichment
+        });
 
         return `
             <li class="recommendation-item recommendation-card" style="border-left-color: ${itemColor};">
@@ -137,7 +153,7 @@ function displayRecommendations(recommendations, type, univId) {
                         <h4 class="degree-name">${itemName} <span class="degree-type">[${degreeType}]</span></h4>
                     </div>
                     <div class="score-badge" style="background-color: ${itemColor};">
-                        ${type === 'courses' ? 'Proposal' : `Score: ${score}`}
+                        ${type === 'courses' ? 'Proposal' : `Score: ${scorePercent}%`}
                     </div>
                 </div>
                 <div class="card-content-full-width">
@@ -161,6 +177,9 @@ function displayRecommendations(recommendations, type, univId) {
         button.addEventListener('click', handleRecommendCoursesClick);
     });
 }
+
+
+
 
 // =======================================================
 // 4. Κύρια Συνάρτηση: loadRecommendations

@@ -2,6 +2,7 @@ const API_BASE_URL = 'http://localhost:8000';
 
 function scoreToCourseColor(score) {
     const clampedScore = Math.max(0, Math.min(1, score));
+    // Colors from light green (low score) to dark green (high score)
     const lowR = 198, lowG = 226, lowB = 189;
     const highR = 40, highG = 167, highB = 69;
     const r = Math.round(lowR + (highR - lowR) * clampedScore);
@@ -10,53 +11,94 @@ function scoreToCourseColor(score) {
     return `rgb(${r}, ${g}, ${b})`;
 }
 
-function displayCourseHeatmap(courses) {
-    const allSkills = Array.from(new Set(
-        courses.flatMap(c => [...(c.new_skills || []), ...(c.compatible_skills || [])])
-    ));
-    const labels = courses.map(c => c.course_name || 'Unknown Course');
+/**
+ * Enhanced function to create a Stacked Bar Chart (Heatmap) with two datasets 
+ * (New Skills & Compatible Skills), showing a maximum of 5 courses, and improved Y-axis label readability.
+ */
+function displayCourseHeatmap(courses, topSkillsLimit = 5) {
 
-    // Δημιουργούμε πολλές αποχρώσεις του μπλε για τις compatible skills
-    const compatibleShades = [
-        'rgba(13, 202, 240, 0.9)',
-        'rgba(0, 180, 220, 0.85)',
-        'rgba(0, 160, 200, 0.8)',
-        'rgba(0, 140, 180, 0.75)',
-        'rgba(0, 120, 160, 0.7)',
-        'rgba(0, 100, 140, 0.65)',
-        'rgba(0, 80, 120, 0.6)'
+    // 1. Data Preparation and LIMITATION
+    // Filter out invalid entries
+    let validCourses = courses.filter(c => c.new_skills || c.compatible_skills);
+
+    // LIMITATION: Display only the top 5 courses for visual clarity
+    const maxCoursesToDisplay = 5;
+    if (validCourses.length > maxCoursesToDisplay) {
+        validCourses = validCourses.slice(0, maxCoursesToDisplay);
+        console.warn(`Displaying only the top ${maxCoursesToDisplay} courses for clarity.`);
+    }
+
+    if (!validCourses.length) {
+        console.warn("No courses with skills available for heatmap.");
+        const canvas = document.getElementById('skillsHeatmapChart');
+        if (canvas) canvas.style.display = 'none';
+        return;
+    }
+
+    const labels = validCourses.map(c => c.course_name || 'Unknown Course');
+
+    // Calculate the count of new and compatible skills for each course
+    const compatibleSkillsCount = validCourses.map(c => (c.compatible_skills || []).length);
+    const newSkillsCount = validCourses.map(c => (c.new_skills || []).length);
+    const allSkillsCount = compatibleSkillsCount.map((c, i) => c + newSkillsCount[i]);
+    const maxSkillsForAxis = Math.max(...allSkillsCount, 1);
+
+    // 2. Dynamic Canvas Height Adjustment
+    const courseCount = validCourses.length;
+    // Calculate required height (35px per course + 150px for margins/titles/legend)
+    const dynamicHeight = (courseCount * 35) + 150;
+    const canvas = document.getElementById('skillsHeatmapChart');
+    if (canvas) {
+        // Set the height before initializing the chart
+        canvas.style.height = `${dynamicHeight}px`;
+    }
+
+    // Check if the canvas context is available
+    const ctx = canvas ? canvas.getContext('2d') : null;
+    if (!ctx) {
+        console.error("Could not get 2D context for the skills heatmap chart.");
+        return;
+    }
+    canvas.style.display = 'block';
+
+    // 3. Create Datasets (ONLY 2: Compatible and New)
+    const datasets = [
+        {
+            label: 'Compatible Skills (Existing)',
+            data: compatibleSkillsCount,
+            backgroundColor: 'rgba(13,202,240,0.8)', // Blue Shade
+            borderColor: '#0dcaf0',
+            borderWidth: 1.2,
+            borderRadius: 5,
+            barThickness: 25,
+        },
+        {
+            label: 'New Skills (Enhancement)',
+            data: newSkillsCount,
+            backgroundColor: 'rgba(40, 167, 69, 0.9)', // Green Shade
+            borderColor: '#146c43',
+            borderWidth: 1.2,
+            borderRadius: 5,
+            barThickness: 25,
+        }
     ];
 
-    const datasets = allSkills.map((skill, i) => ({
-        label: skill,
-        data: courses.map(() => 1),
-        backgroundColor: courses.map(course => {
-            if ((course.new_skills || []).includes(skill))
-                return 'rgba(25, 135, 84, 0.9)'; // πράσινο για new
-            if ((course.compatible_skills || []).includes(skill))
-                return compatibleShades[i % compatibleShades.length]; // διαφορετική μπλε απόχρωση
-            return 'rgba(220,220,220,0.25)';
-        }),
-        borderColor: courses.map(course => {
-            if ((course.new_skills || []).includes(skill)) return '#146c43';
-            if ((course.compatible_skills || []).includes(skill)) return '#0dcaf0';
-            return 'rgba(200,200,200,0.3)';
-        }),
-        borderWidth: 1.3,
-        borderRadius: 5,
-        barThickness: 16,
-        categoryPercentage: 0.9,
-        barPercentage: 0.85
-    }));
+    // Destroy previous chart instance
+    if (window.skillsHeatmapChart && typeof window.skillsHeatmapChart.destroy === 'function') {
+        window.skillsHeatmapChart.destroy();
+    }
 
-    const ctx = document.getElementById('skillsHeatmapChart').getContext('2d');
-    new Chart(ctx, {
+    // Update chart title
+    document.querySelector('.chart-title').textContent = `💡 Skills Heatmap per Course (Top ${validCourses.length} Courses Breakdown)`;
+
+    // 4. Create Chart
+    window.skillsHeatmapChart = new Chart(ctx, {
         type: 'bar',
         data: { labels, datasets },
         options: {
             indexAxis: 'y',
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: false, // Essential for dynamic height to work
             plugins: {
                 legend: {
                     position: 'top',
@@ -69,18 +111,44 @@ function displayCourseHeatmap(courses) {
                 tooltip: {
                     callbacks: {
                         label: function (context) {
-                            const color = context.dataset.backgroundColor[context.dataIndex];
-                            if (color.includes('25, 135, 84')) return context.dataset.label + ': 🟢 New Skill';
-                            if (color.includes('13, 202, 240') || color.includes('0, 180') || color.includes('0, 160'))
-                                return context.dataset.label + ': 🔵 Compatible Skill';
-                            return context.dataset.label + ': -';
+                            return `${context.dataset.label}: ${context.raw} skills`;
+                        },
+                        title: function (context) {
+                            const courseIndex = context[0].dataIndex;
+                            const total = allSkillsCount[courseIndex];
+                            return `${context[0].label} (Total Skills: ${total})`;
+                        },
+                        footer: function (context) {
+                            // Display the list of skills in the footer for clarity
+                            const course = validCourses[context[0].dataIndex];
+                            let footer = '';
+                            if ((course.new_skills || []).length) {
+                                footer += `New: ${(course.new_skills || []).join(', ')}\n`;
+                            }
+                            if ((course.compatible_skills || []).length) {
+                                footer += `Compatible: ${(course.compatible_skills || []).join(', ')}`;
+                            }
+                            return footer.trim();
                         }
                     }
                 }
             },
             scales: {
-                x: { stacked: true, display: false },
-                y: { stacked: true }
+                x: {
+                    stacked: true,
+                    title: { display: true, text: `Count of Skills` },
+                    min: 0,
+                    // Round up max limit to the nearest 5
+                    max: Math.ceil(maxSkillsForAxis / 5) * 5 || 5,
+                    ticks: { stepSize: 1, font: { size: 12 } }
+                },
+                y: {
+                    stacked: true,
+                    // INCREASED FONT SIZE: Better readability for course names
+                    ticks: {
+                        font: { size: 14, weight: 'bold' }
+                    }
+                }
             }
         }
     });
@@ -97,6 +165,8 @@ function displayCourseRecommendations(courses, degreeName) {
 
     if (!courses || courses.length === 0) {
         resultsContainer.innerHTML = `<li class="course-card" style="border-left-color: #dc3545;">❌ No recommended courses found.</li>`;
+        const canvas = document.getElementById('skillsHeatmapChart');
+        if (canvas) canvas.style.display = 'none';
         return;
     }
 
