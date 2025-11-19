@@ -482,6 +482,8 @@ class CourseRecommenderV4:
                 "missing_skills": missing,
                 "reason": reason_text,
                 "skills": course_raw_skills[i],
+                "website": getattr(c, "website", None),
+
             })
 
         # ---------------------------

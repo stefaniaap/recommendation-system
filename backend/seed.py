@@ -104,6 +104,7 @@ def run_seed():
                     "ects_list": c["ects_list"],
                     "mand_opt_list": ["Mandatory"],
                     "msc_bsc_list": [degree_type],
+                    
                 }
             )
             courses.append(course)
@@ -113,24 +114,25 @@ def run_seed():
         # EXTRA ELECTIVE COURSES
         # --------------------------------------------------------
         extra_courses_data = [
-            {"lesson_name": "AI Ethics", "description": "Ethical considerations in AI", "program": programs[3], "language": "English", "semester_number": "2", "ects_list": [3]},
-            {"lesson_name": "Deep Learning", "description": "Neural networks and applications", "program": programs[1], "language": "English", "semester_number": "2", "ects_list": [5]},
-            {"lesson_name": "Natural Language Processing", "description": "Text mining and NLP techniques", "program": programs[9], "language": "English", "semester_number": "2", "ects_list": [5]},
+            {"lesson_name": "AI Ethics", "description": "Ethical considerations in AI", "program": programs[3], "language": "English", "semester_number": "2", "ects_list": [3], "website": "https://example.com/ai-ethics"},
+            {"lesson_name": "Deep Learning", "description": "Neural networks and applications", "program": programs[1], "language": "English", "semester_number": "2", "ects_list": [5], "website": "https://example.com/deep-learning"},
+            {"lesson_name": "Natural Language Processing", "description": "Text mining and NLP techniques", "program": programs[9], "language": "English", "semester_number": "2", "ects_list": [5], "website": "https://example.com/nlp"},
         ]
         for c in extra_courses_data:
             degree_type = c["program"].degree_type
             course = get_or_create(
-                db, Course,
-                {"lesson_name": c["lesson_name"], "university_id": c["program"].university_id},
-                {
-                    "program_id": c["program"].program_id,
-                    "description": c["description"],
-                    "language": c["language"],
-                    "semester_number": c["semester_number"],
-                    "ects_list": c["ects_list"],
-                    "mand_opt_list": ["Optional"],
-                    "msc_bsc_list": [degree_type],
-                }
+            db, Course,
+            {"lesson_name": c["lesson_name"], "university_id": c["program"].university_id},
+            {
+            "program_id": c["program"].program_id,
+            "description": c["description"],
+            "language": c["language"],
+            "semester_number": c["semester_number"],
+            "ects_list": c["ects_list"],
+            "mand_opt_list": ["Optional"],
+            "msc_bsc_list": [degree_type],
+            "website": c.get("website", "")
+            }
             )
             courses.append(course)
         db.flush()

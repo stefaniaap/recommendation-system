@@ -51,16 +51,18 @@ def recommend_electives(
 
         # Format recommended courses with scores and skills
         recommended_courses = [
-            {
-                "course_name": item.get("lesson_name", "Unknown"),
-                "score": float(item.get("final_score", 0.0)),
-                "skills": item.get("skills", []),
-                "matching_skills": item.get("matching_skills", []),
-                "missing_skills": item.get("missing_skills", []),
-                "reason": item.get("reason", "")
-            }
-            for item in result.get("recommended_electives", [])
-        ]
+{
+"course_name": item.get("lesson_name", "Unknown"),
+"score": float(item.get("final_score", 0.0)),
+"skills": item.get("skills", []),
+"matching_skills": item.get("matching_skills", []),
+"missing_skills": item.get("missing_skills", []),
+"reason": item.get("reason", ""),
+"website": item.get("website", "")  # <-- Προσθήκη του website
+}
+for item in result.get("recommended_electives", [])
+]
+
 
         return {
             "success": True,
