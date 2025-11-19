@@ -88,6 +88,79 @@ async function loadElectiveSkills(univId, programId) {
     }
 }
 
+async function loadSemesters(univId, programId) {
+    // Έλεγξε αν το dropdown υπάρχει
+    const dropdown = document.getElementById("semester");
+    if (!dropdown) {
+        console.error("Dropdown element with id 'semester' not found!");
+        return;
+    }
+
+    // Καθαρισμός dropdown
+    dropdown.innerHTML = '<option value="">-- Select Semester --</option>';
+
+    // Έλεγχος παραμέτρων
+    if (!univId || !programId) {
+        console.warn("University ID or Program ID is missing:", univId, programId);
+        return;
+    }
+
+    try {
+        console.log(`Fetching semesters for university: ${univId}, program: ${programId}`);
+        const res = await fetch(`${API_BASE}/universities/${univId}/degrees/${programId}/semesters`);
+
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+        const data = await res.json();
+
+        console.log("API response:", data);
+
+        if (!data.semesters || data.semesters.length === 0) {
+            console.warn("No semesters returned from API.");
+            return;
+        }
+
+        data.semesters.forEach(sem => {
+            console.log("Adding semester to dropdown:", sem);
+            dropdown.appendChild(new Option(sem, sem));
+        });
+
+        console.log("Dropdown populated successfully.");
+
+    } catch (err) {
+        console.error("Error loading semesters:", err);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const univDropdown = document.getElementById("university");
+    const programDropdown = document.getElementById("program");
+
+    if (!univDropdown || !programDropdown) {
+        console.error("University or Program dropdown not found!");
+        return;
+    }
+
+    // Όταν αλλάξει το πρόγραμμα
+    programDropdown.addEventListener("change", () => {
+        const univId = univDropdown.value;
+        const programId = programDropdown.value;
+
+        if (univId && programId) {
+            loadSemesters(univId, programId);
+        }
+    });
+
+    // Προαιρετικά: όταν αλλάξει πανεπιστήμιο, μπορεί να θέλεις να γεμίζεις τα προγράμματα πρώτα
+    univDropdown.addEventListener("change", () => {
+        // Αν έχεις δυναμική λίστα προγραμμάτων, εδώ μπορείς να την φορτώσεις
+        // και μετά να καλέσεις loadSemesters με το πρώτο πρόγραμμα ή καθαρίζεις το semester dropdown
+        document.getElementById("semester").innerHTML = '<option value="">-- Select Semester --</option>';
+    });
+});
+
+
+
 // ============================
 // Perform search for recommended elective courses
 // based on selected university, program, and skills

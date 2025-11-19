@@ -6,6 +6,8 @@ from backend.database import get_db
 from backend.models import DegreeProgram, Skill
 from backend.student_recommender import CourseRecommenderV4
 from backend.schemas import ElectiveRecommendationRequest
+from backend.models import Course
+
 
 router = APIRouter()
 
@@ -147,3 +149,32 @@ def get_elective_skills_for_program(
     except Exception as e:
         print(f"Error in get_elective_skills_for_program: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+
+@router.get("/universities/{univ_id}/degrees/{program_id}/semesters")
+def get_program_semesters(univ_id: int, program_id: int, db: Session = Depends(get_db)):
+    """
+    Επιστρέφει μια λίστα από 1 έως duration_semesters ενός προγράμματος,
+    για χρήση σε dropdown.
+    """
+    program = (
+        db.query(DegreeProgram)
+        .filter(
+            DegreeProgram.program_id == program_id,
+            DegreeProgram.university_id == univ_id
+        )
+        .first()
+    )
+
+    if not program or not program.duration_semesters:
+        return {"semesters": []}
+
+    try:
+        num_semesters = int(program.duration_semesters)
+        if num_semesters < 1:
+            return {"semesters": []}
+    except ValueError:
+        return {"semesters": []}
+
+    semesters = list(range(1, num_semesters + 1))
+    return {"semesters": semesters}
