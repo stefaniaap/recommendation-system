@@ -7,6 +7,7 @@ from backend.models import DegreeProgram, Skill
 from backend.student_recommender import CourseRecommenderV4
 from backend.schemas import ElectiveRecommendationRequest
 from backend.models import Course
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 
 router = APIRouter()
@@ -78,56 +79,40 @@ for item in result.get("recommended_electives", [])
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
 
 
+
+
 @router.get(
     "/universities/{univ_id}/degrees/{program_id}/elective-skills",
-    summary="Get skills from elective courses of a specific degree program"
+    summary="Get skills from elective courses of a specific degree program for a specific semester"
 )
 def get_elective_skills_for_program(
     univ_id: int,
     program_id: int,
+    semester: str = Query(..., description="Semester number as string (required)"),
     db: Session = Depends(get_db)
 ):
-    """
-    Retrieve all skills associated with elective courses of a specific degree program.
-
-    Parameters:
-    - univ_id (int): University ID.
-    - program_id (int): Degree program ID.
-    - db (Session): SQLAlchemy database session (injected by FastAPI dependency).
-
-    Returns:
-    - JSON containing a list of skills with skill_id and skill_name.
-    """
     try:
-        # Fetch the degree program for the university
         program = db.query(DegreeProgram).filter(
             DegreeProgram.program_id == program_id,
             DegreeProgram.university_id == univ_id
         ).first()
 
         if not program:
-            raise HTTPException(
-                status_code=404,
-                detail="Degree program not found for this university."
-            )
+            raise HTTPException(status_code=404, detail="Degree program not found for this university.")
 
-        # Filter only elective courses
         elective_courses = []
         for course in getattr(program, "courses", []) or []:
-            mand_opt = getattr(course, "mand_opt_list", None)
-            is_optional = False
-            if isinstance(mand_opt, str) and "optional" in mand_opt.lower():
-                is_optional = True
-            elif isinstance(mand_opt, (list, tuple, set)):
-                if any("optional" in str(v).lower() for v in mand_opt):
-                    is_optional = True
-            if is_optional:
+            if course.program_id != program.program_id:
+                continue
+
+            mand_opt_list = getattr(course, "mand_opt_list", [])
+            if not isinstance(mand_opt_list, (list, tuple, set)):
+                mand_opt_list = [str(mand_opt_list)]
+            is_optional = any(str(v).lower() == "optional" for v in mand_opt_list)
+
+            if is_optional and str(getattr(course, "semester_number", "")) == str(semester):
                 elective_courses.append(course)
 
-        if not elective_courses:
-            return {"skills": []}
-
-        # Collect unique skill IDs from elective courses
         skill_ids = {
             cs.skill_id
             for course in elective_courses
@@ -138,7 +123,6 @@ def get_elective_skills_for_program(
         if not skill_ids:
             return {"skills": []}
 
-        # Retrieve Skill objects from database and sort by name
         skills = db.query(Skill).filter(Skill.skill_id.in_(skill_ids)).order_by(Skill.skill_name.asc()).all()
         skill_list = [{"skill_id": s.skill_id, "skill_name": s.skill_name} for s in skills]
 
@@ -149,7 +133,10 @@ def get_elective_skills_for_program(
     except Exception as e:
         print(f"Error in get_elective_skills_for_program: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-    
+
+
+
+
 
 @router.get("/universities/{univ_id}/degrees/{program_id}/semesters")
 def get_program_semesters(univ_id: int, program_id: int, db: Session = Depends(get_db)):

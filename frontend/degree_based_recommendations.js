@@ -41,36 +41,36 @@ async function loadPrograms(univId) {
 // ============================
 // Load elective skills for a selected university and program
 // ============================
-async function loadElectiveSkills(univId, programId) {
+async function loadElectiveSkills(univId, programId, semester) {
     const container = document.getElementById("skillsContainer");
     container.innerHTML = "<p>Loading skills...</p>";
 
-    // If university or program is not selected, display message
-    if (!univId || !programId) {
-        container.innerHTML = "<p>Please select a university and a program first.</p>";
+    if (!univId || !programId || !semester) {
+        container.innerHTML = "<p>Please select a university, a program, and a semester.</p>";
         return;
     }
 
-    // Debug log to inspect request parameters
-    console.log("Fetching elective skills for university:", univId, "program:", programId);
+    console.log("Fetching elective skills:", { univId, programId, semester });
 
     try {
-        const res = await fetch(`${API_BASE}/universities/${univId}/degrees/${programId}/elective-skills`);
+        const res = await fetch(
+            `${API_BASE}/universities/${univId}/degrees/${programId}/elective-skills?semester=${semester}`
+        );
+
         if (!res.ok) {
             console.error(`Fetch returned status ${res.status}`);
             container.innerHTML = `<p style="color:red;">Error ${res.status}: Skills not found.</p>`;
             return;
         }
+
         const data = await res.json();
         container.innerHTML = "";
 
-        // If no skills returned
         if (!data.skills || data.skills.length === 0) {
-            container.innerHTML = "<p>No skills available for this program.</p>";
+            container.innerHTML = "<p>No skills for this semester.</p>";
             return;
         }
 
-        // Create checkboxes for each skill
         const content = document.createElement("div");
         content.className = "category-content";
 
@@ -87,6 +87,8 @@ async function loadElectiveSkills(univId, programId) {
         container.innerHTML = "<p style='color:red;'>Error while loading skills.</p>";
     }
 }
+
+
 
 async function loadSemesters(univId, programId) {
     // Έλεγξε αν το dropdown υπάρχει
@@ -132,32 +134,6 @@ async function loadSemesters(univId, programId) {
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    const univDropdown = document.getElementById("university");
-    const programDropdown = document.getElementById("program");
-
-    if (!univDropdown || !programDropdown) {
-        console.error("University or Program dropdown not found!");
-        return;
-    }
-
-    // Όταν αλλάξει το πρόγραμμα
-    programDropdown.addEventListener("change", () => {
-        const univId = univDropdown.value;
-        const programId = programDropdown.value;
-
-        if (univId && programId) {
-            loadSemesters(univId, programId);
-        }
-    });
-
-    // Προαιρετικά: όταν αλλάξει πανεπιστήμιο, μπορεί να θέλεις να γεμίζεις τα προγράμματα πρώτα
-    univDropdown.addEventListener("change", () => {
-        // Αν έχεις δυναμική λίστα προγραμμάτων, εδώ μπορείς να την φορτώσεις
-        // και μετά να καλέσεις loadSemesters με το πρώτο πρόγραμμα ή καθαρίζεις το semester dropdown
-        document.getElementById("semester").innerHTML = '<option value="">-- Select Semester --</option>';
-    });
-});
 
 
 
@@ -224,19 +200,47 @@ async function performSearch() {
 // Event Listeners
 // ============================
 document.addEventListener("DOMContentLoaded", () => {
-    // Load universities on page load
+
+    // Load universities initially
     loadUniversities();
 
-    // Load programs when a university is selected
-    document.getElementById("university").addEventListener("change", e => loadPrograms(e.target.value));
+    const univDropdown = document.getElementById("university");
+    const programDropdown = document.getElementById("program");
+    const semesterDropdown = document.getElementById("semester");
 
-    // Load skills when a program is selected
-    document.getElementById("program").addEventListener("change", e => {
-        const univId = document.getElementById("university").value;
-        const programId = e.target.value;
-        loadElectiveSkills(univId, programId);
+    // When university changes → load programs
+    univDropdown.addEventListener("change", () => {
+        const univId = univDropdown.value;
+
+        loadPrograms(univId);
+
+        // Clear semester & skills
+        semesterDropdown.innerHTML = '<option value="">-- Select Semester --</option>';
+        document.getElementById("skillsContainer").innerHTML = "";
     });
 
-    // Trigger search on button click
+    // When program changes → load semesters
+    programDropdown.addEventListener("change", () => {
+        const univId = univDropdown.value;
+        const programId = programDropdown.value;
+
+        if (univId && programId) {
+            loadSemesters(univId, programId);
+        }
+
+        // Clear skills
+        document.getElementById("skillsContainer").innerHTML = "";
+    });
+
+    // When semester changes → load elective skills
+    semesterDropdown.addEventListener("change", () => {
+        const univId = univDropdown.value;
+        const programId = programDropdown.value;
+        const semester = semesterDropdown.value;
+
+        loadElectiveSkills(univId, programId, semester);
+    });
+
+    // Search button
     document.getElementById("searchBtn").addEventListener("click", performSearch);
 });
