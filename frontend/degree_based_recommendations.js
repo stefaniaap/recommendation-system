@@ -157,7 +157,9 @@ async function performSearch() {
     resultsContainer.innerHTML = "<p>Loading recommendations...</p>";
 
     try {
-        const response = await fetch(`${API_BASE}/universities/${universityId}/degrees/electives`, {
+
+        const semester = document.getElementById("semester").value;
+        const response = await fetch(`${API_BASE}/universities/${universityId}/degrees/electives?semester=${semester}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

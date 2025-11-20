@@ -17,6 +17,7 @@ router = APIRouter()
 def recommend_electives(
     univ_id: int,
     payload: ElectiveRecommendationRequest,
+    semester: str = Query(None, description="Semester number to filter elective courses"),
     min_overlap_ratio: float = 0.0,
     db: Session = Depends(get_db)
 ):
@@ -26,6 +27,7 @@ def recommend_electives(
     Parameters:
     - univ_id (int): University ID.
     - payload (ElectiveRecommendationRequest): Request payload containing program_id, target skills, and top_n courses.
+    - semester (str, optional): Only recommend electives from this semester if provided.
     - min_overlap_ratio (float): Minimum ratio of matching skills required for recommendation.
     - db (Session): SQLAlchemy database session (injected by FastAPI dependency).
 
@@ -37,12 +39,14 @@ def recommend_electives(
 
         # Fetch recommended electives using the recommender system
         result = recommender.recommend_electives_for_degree_enhanced(
-            univ_id=univ_id,
-            program_id=payload.program_id,
-            target_skills=payload.target_skills,
-            top_n=payload.top_n,
-            min_overlap_ratio=min_overlap_ratio
-        )
+    univ_id=univ_id,
+    program_id=payload.program_id,
+    target_skills=payload.target_skills,
+    top_n=payload.top_n,
+    min_overlap_ratio=min_overlap_ratio,
+    semester=semester
+)
+
 
         # Handle empty or error response from recommender
         if not result or "message" in result:

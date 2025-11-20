@@ -332,6 +332,7 @@ class CourseRecommenderV4:
         target_skills: List[str],
         top_n: int = 5,
         min_overlap_ratio: float = 0.1,
+        semester: Optional[int] = None 
     ) -> Dict[str, Any]:
         """
         Recommend elective courses for a program.
@@ -386,12 +387,14 @@ class CourseRecommenderV4:
                 is_optional = True
             elif isinstance(mand_opt, (list, tuple, set)):
                 is_optional = any("optional" in str(v).lower() for v in mand_opt)
-            if is_optional:
-                elective_courses.append(c)
-
-        if not elective_courses:
-            return {"message": "No elective courses were found for this program."}
-
+            if not is_optional:
+                continue
+            if semester is not None:
+                c_sem = getattr(c, "semester_number", None)
+                if str(c_sem) != str(semester):
+                    continue
+        
+            elective_courses.append(c)
         # ---------------------------
         # Extract and normalize skills for each elective
         # ---------------------------
