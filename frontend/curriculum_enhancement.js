@@ -96,7 +96,7 @@ function displayCourseHeatmap(courses, topSkillsLimit = 5) {
 
     // Update chart title dynamically
     document.querySelector('.chart-title').textContent =
-        `💡 Skills Heatmap per Course (Top ${validCourses.length} Courses Breakdown)`;
+        ` Skills Heatmap per Course (Top ${validCourses.length} Courses Breakdown)`;
 
     // Step 4 — Create chart
     window.skillsHeatmapChart = new Chart(ctx, {
@@ -161,7 +161,7 @@ function displayCourseRecommendations(courses, degreeName) {
     const loadingSpinner = document.getElementById('loading-spinner');
 
     if (loadingSpinner) loadingSpinner.style.display = 'none';
-    titleElement.textContent = `📚 Recommended Courses for: ${decodeURIComponent(degreeName)}`;
+    titleElement.textContent = ` Recommended Courses for: ${decodeURIComponent(degreeName)}`;
 
     if (!courses || courses.length === 0) {
         resultsContainer.innerHTML =

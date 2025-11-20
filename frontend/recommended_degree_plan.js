@@ -133,7 +133,7 @@ function displayCourseRecommendations(courses, degreeName) {
     if (loadingSpinner) loadingSpinner.style.display = 'none';
 
     // Set page title
-    titleElement.textContent = `📚 Recommended Courses for: ${decodeURIComponent(degreeName)}`;
+    titleElement.textContent = ` Recommended Courses for: ${decodeURIComponent(degreeName)}`;
 
     // Show message if no courses found
     if (!courses || courses.length === 0) {

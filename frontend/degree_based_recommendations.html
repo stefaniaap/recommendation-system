@@ -230,13 +230,29 @@
 
         /* Skills Container */
         #skillsContainer {
-            margin: 30px 0;
+            margin: 30px auto;
+            /* πάνω-κάτω 30px, κέντρο οριζόντια */
+            max-width: 600px;
+            /* περιορίζει το πλάτος */
             border: 1px solid #dee2e6;
             border-radius: 8px;
             overflow: hidden;
             padding: 15px;
             background: #fff;
         }
+
+        .category-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        #skillsContainer p:first-child {
+            text-align: center;
+            font-weight: 500;
+            color: var(--secondary-color);
+        }
+
 
         .category-content label {
             display: flex;
@@ -433,21 +449,33 @@
         <div class="filter-card">
             <h3><i class="fas fa-filter"></i> Select Filters</h3>
             <div class="filter-grid">
-                <!-- University Dropdown -->
+
+                <!-- University -->
                 <div>
                     <label for="university"><i class="fas fa-university"></i> University:</label>
                     <select id="university">
                         <option value="">-- Select University --</option>
                     </select>
                 </div>
-                <!-- Degree Program Dropdown -->
+
+                <!-- Degree Program -->
                 <div>
                     <label for="program"><i class="fas fa-book"></i> Degree Program:</label>
                     <select id="program">
                         <option value="">-- Select Program --</option>
                     </select>
                 </div>
+
+                <!-- Semester -->
+                <div>
+                    <label for="semester"><i class="fas fa-calendar"></i> Semester:</label>
+                    <select id="semester">
+                        <option value="">-- Select Semester --</option>
+                    </select>
+                </div>
+
             </div>
+
 
             <!-- Skills Selection -->
             <h3><i class="fas fa-cogs"></i> Select Skills</h3>
@@ -455,12 +483,7 @@
                 <p>Select a university and degree program first.</p>
             </div>
 
-            <div>
-                <label for="semester"><i class="fas fa-calendar"></i> Semester:</label>
-                <select id="semester">
-                    <option value="">-- Select Semester --</option>
-                </select>
-            </div>
+
 
 
             <!-- Search Button -->
