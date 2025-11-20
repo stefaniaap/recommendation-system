@@ -147,7 +147,7 @@ async function performSearch() {
     const skills = Array.from(document.querySelectorAll("input[type='checkbox']:checked"))
         .map(cb => cb.dataset.skillName);
 
-    // Validate all fields are selected
+    // Validate
     if (!universityId || !programId || skills.length === 0) {
         alert("Please complete all fields.");
         return;
@@ -157,38 +157,50 @@ async function performSearch() {
     resultsContainer.innerHTML = "<p>Loading recommendations...</p>";
 
     try {
-
         const semester = document.getElementById("semester").value;
-        const response = await fetch(`${API_BASE}/universities/${universityId}/degrees/electives?semester=${semester}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                program_id: parseInt(programId),
-                target_skills: skills,
-                top_n: 10
-            })
-        });
+
+        const response = await fetch(
+            `${API_BASE}/universities/${universityId}/degrees/electives?semester=${semester}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    program_id: parseInt(programId),
+                    target_skills: skills,
+                    top_n: 10
+                })
+            }
+        );
 
         const data = await response.json();
 
-        // If no recommended electives returned
+        // No results
         if (!data.recommended_electives || data.recommended_electives.length === 0) {
             resultsContainer.innerHTML = "<p>No recommended elective courses found.</p>";
             return;
         }
 
-        // Display each recommended course as a result card
+        // Show cards (WITHOUT website, and clickable)
         resultsContainer.innerHTML = "";
         data.recommended_electives.forEach(course => {
             const card = document.createElement("div");
             card.className = "result-card";
+
             card.innerHTML = `
                 <h4>${course.course_name}</h4>
                 <p><strong>Score:</strong> ${course.score.toFixed(3)}</p>
                 ${course.skills?.length ? `<p><strong>Skills:</strong> ${course.skills.join(', ')}</p>` : ''}
                 ${course.matching_skills?.length ? `<p><strong>Matching Skills:</strong> ${course.matching_skills.join(', ')}</p>` : ''}
-                ${course.website ? `<p><strong>Website:</strong> <a href="${course.website}" target="_blank" class="course-link">${course.website}</a></p>` : ''}
             `;
+
+            // Make card clickable if website exists
+            if (course.website) {
+                card.style.cursor = "pointer";
+                card.addEventListener("click", () => {
+                    window.open(course.website, "_blank");
+                });
+            }
+
             resultsContainer.appendChild(card);
         });
 
@@ -197,6 +209,7 @@ async function performSearch() {
         resultsContainer.innerHTML = "<p style='color:red;'>Error fetching recommendations.</p>";
     }
 }
+
 
 // ============================
 // Event Listeners
