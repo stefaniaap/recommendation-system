@@ -377,63 +377,69 @@ def add_interaction(data: InteractionIn, db: Session = Depends(get_db)):
 # ---------------------------
 # Κλάση CourseRecommender
 # ---------------------------
+from collections import Counter
+
 class CourseRecommender:
 
     def __init__(self, db: Session):
         self.db = db
 
-    # ---------------------------
-    # History-based recommendations
-    # ---------------------------
     def recommend_based_on_history(self, user_id: int, top_n: int = 10):
         """
-        Recommend courses based on the user's past selections/interactions.
-        Uses interest_score from interactions to weight suggestions.
+        Recommend courses based on user past selections.
+        Now finds *similar courses* based on skill overlap,
+        NOT just the same courses user clicked.
         """
-        user_history = self.db.query(UserInteraction)\
-                              .filter(UserInteraction.user_id == user_id,
-                                      UserInteraction.course_name != None)\
-                              .all()
-        if not user_history:
-            return []  # fallback αν δεν υπάρχει ιστορικό
+        # 1. Load user interaction history
+        history = self.db.query(UserInteraction).filter(
+            UserInteraction.user_id == user_id
+        ).all()
 
-        # Συχνότητα επιλογών
-        course_counter = Counter()
-        for h in user_history:
-            course_counter[h.course_name] += getattr(h, "interest_score", 1.0)
+        if not history:
+            return []
 
-        most_selected_courses = [c for c, _ in course_counter.most_common(50)]
+        # 2. Collect all skills from user interactions
+        user_skills = set()
+        for h in history:
+            if h.skills:
+                user_skills.update(h.skills)
 
-        # Ανάκτηση όλων διαθέσιμων μαθημάτων
+        # 3. Load all courses
         all_courses = self.db.query(Course).all()
-        course_scores = []
+
+        # 4. Find courses the user has already viewed
+        viewed_courses = set([h.course_name for h in history])
+
+        recommendations = []
 
         for course in all_courses:
-            score = 0.0
-            # bonus από ιστορικό με βάρος interest_score
-            for h in user_history:
-                if h.course_name == course.lesson_name:
-                    score += getattr(h, "interest_score", 1.0)
 
-            # bonus αν skills ταιριάζουν με ιστορικό
-            user_skills = []
-            for h in user_history:
-                user_skills.extend(getattr(h, "skills", []))
+            # Skip already-viewed courses
+            if course.lesson_name in viewed_courses:
+                continue
+
+            # Get course skills
             course_skill_names = [cs.skill.skill_name for cs in course.skills]
-            common_skills = set(course_skill_names) & set(user_skills)
 
-            score += 0.5 * len(common_skills)
+            # Overlap score (similarity)
+            common_skills = user_skills & set(course_skill_names)
+            similarity_score = len(common_skills)
 
-            course_scores.append({"course_name": course.lesson_name, "score": score})
+            # Only recommend if similarity > 0
+            if similarity_score > 0:
+                recommendations.append({
+                    "course_name": course.lesson_name,
+                    "score": similarity_score,
+                    "common_skills": list(common_skills),
+                    "reason": "Based on your past selections"
+                })
 
-        # Ταξινόμηση και επιλογή top N
-        top_recommendations = sorted(course_scores, key=lambda x: x["score"], reverse=True)[:top_n]
+        # 5. Sort by score DESC
+        recommendations = sorted(
+            recommendations, key=lambda x: x["score"], reverse=True
+        )[:top_n]
 
-        # Προσθήκη σημείωσης
-        for c in top_recommendations:
-            c["reason"] = "Based on your past selections"
-
-        return top_recommendations
+        return recommendations
 
 
 # ---------------------------
@@ -443,4 +449,10 @@ class CourseRecommender:
 def recommend_personalized_history(user_id: int, top_n: int = 10, db: Session = Depends(get_db)):
     recommender = CourseRecommender(db)
     results = recommender.recommend_based_on_history(user_id, top_n)
+    
+    # Εδώ επιβεβαιώνουμε ότι κάθε αντικείμενο έχει score
+    for r in results:
+        if "score" not in r:
+            r["score"] = 0.0
+    
     return {"user_id": user_id, "recommendations": results}
