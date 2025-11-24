@@ -10,9 +10,83 @@ from backend.schemas import CourseRecommendationsResponse, DegreeProgramOut, Use
 from backend.course_recommender_for_university import CourseRecommender as CourseRecommenderV2
 from backend.degree_recommender_for_university import UniversityRecommender
 from backend.student_recommender import CourseRecommender as CourseRecommenderV3
+from backend.models import Course
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# backend/student_recommender.py (μέσα στην κλάση CourseRecommender)
+
+from sqlalchemy.orm import Session
+from collections import Counter
+
+class CourseRecommender:
+
+
+    def __init__(self, db: Session):
+        self.db = db
+
+# ---------------------------
+# Νέα μέθοδος: History-based recommendations
+# ---------------------------
+    def recommend_based_on_history(
+        self,
+        user_id: int,
+        top_n: int = 10
+    ):
+        """
+        Recommend courses based on the user's past selections/interactions.
+        Combines personalized preferences with history-aware scoring.
+        """
+        # 1️⃣ Συλλογή ιστορικού χρήστη
+        from backend.models import UserInteraction  # assume table exists
+        user_history = self.db.query(UserInteraction)\
+                            .filter(UserInteraction.user_id == user_id,
+                                    UserInteraction.course_name != None)\
+                            .all()
+        if not user_history:
+            return []  # Δεν υπάρχει ιστορικό, fallback σε default personalized
+
+        # 2️⃣ Μετράμε τις πιο συχνές επιλογές του χρήστη
+        course_counter = Counter([h.course_name for h in user_history])
+        most_selected_courses = [c for c, _ in course_counter.most_common(50)]  # top 50 history
+
+        # 3️⃣ Ανάκτηση όλων διαθέσιμων μαθημάτων
+        all_courses = self.db.query(Course).all()  # assume Course model exists
+        course_scores = []
+
+        # 4️⃣ Σκοράρισμα με βάση similarity με ιστορικό
+        for course in all_courses:
+            score = 0.0
+
+            # bonus αν το course είναι ίδιο με προηγούμενες επιλογές
+            if course.lesson_name in most_selected_courses:
+                score += 1.0
+
+            # bonus αν τα skills του course εμφανίζονται συχνά στο ιστορικό
+            user_skills = []
+            for h in user_history:
+                user_skills.extend(getattr(h, "skills", []))  # προσαρμόστε αν χρειάζεται
+            common_skills = set(getattr(course, "skills", [])) & set(user_skills)
+            score += 0.5 * len(common_skills)
+
+            # τελικό score μπορεί να προσαρμοστεί με TF-IDF ή collaborative filtering
+            course_scores.append({"course_name": course.lesson_name, "score": score})
+
+        # 5️⃣ Ταξινόμηση και επιλογή top N
+        top_recommendations = sorted(course_scores, key=lambda x: x["score"], reverse=True)[:top_n]
+
+        # 6️⃣ Προσθήκη σημείωσης “based on your past selections”
+        for c in top_recommendations:
+            c["reason"] = "Based on your past selections"
+
+        return top_recommendations
+
+@router.get("/recommend/personalized/history/{user_id}")
+def recommend_personalized_history(user_id: int, top_n: int = 10, db: Session = Depends(get_db)):
+    recommender = CourseRecommenderV3(db)
+    results = recommender.recommend_based_on_history(user_id, top_n)
+    return {"user_id": user_id, "recommendations": results}
 
 
 @router.get(
@@ -263,3 +337,110 @@ def recommend_personalized(preferences: UserPreferences, db: Session = Depends(g
     except Exception as e:
         logger.exception(f"Error in recommend_personalized: {e}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+
+        
+from pydantic import BaseModel
+from backend.models import UserInteraction
+
+class InteractionIn(BaseModel):
+    user_id: int
+    course_name: str
+    interest_score: float = 1.0  # default 1.0, αυξάνεται αν enrolled/confirmed
+
+
+# ---------------------------
+# Endpoint για αποθήκευση interaction
+# ---------------------------
+@router.post("/interactions/add")
+def add_interaction(data: InteractionIn, db: Session = Depends(get_db)):
+
+    course = db.query(Course).filter(Course.lesson_name == data.course_name).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    user_skills = [cs.skill.skill_name for cs in course.skills]
+
+    interaction = UserInteraction(
+        user_id=data.user_id,
+        course_name=data.course_name,
+        skills=user_skills,
+        interest_score=data.interest_score
+    )
+
+    db.add(interaction)
+    db.commit()
+    db.refresh(interaction)
+
+    return {"status": "ok", "interaction_id": interaction.id}
+
+
+# ---------------------------
+# Κλάση CourseRecommender
+# ---------------------------
+class CourseRecommender:
+
+    def __init__(self, db: Session):
+        self.db = db
+
+    # ---------------------------
+    # History-based recommendations
+    # ---------------------------
+    def recommend_based_on_history(self, user_id: int, top_n: int = 10):
+        """
+        Recommend courses based on the user's past selections/interactions.
+        Uses interest_score from interactions to weight suggestions.
+        """
+        user_history = self.db.query(UserInteraction)\
+                              .filter(UserInteraction.user_id == user_id,
+                                      UserInteraction.course_name != None)\
+                              .all()
+        if not user_history:
+            return []  # fallback αν δεν υπάρχει ιστορικό
+
+        # Συχνότητα επιλογών
+        course_counter = Counter()
+        for h in user_history:
+            course_counter[h.course_name] += getattr(h, "interest_score", 1.0)
+
+        most_selected_courses = [c for c, _ in course_counter.most_common(50)]
+
+        # Ανάκτηση όλων διαθέσιμων μαθημάτων
+        all_courses = self.db.query(Course).all()
+        course_scores = []
+
+        for course in all_courses:
+            score = 0.0
+            # bonus από ιστορικό με βάρος interest_score
+            for h in user_history:
+                if h.course_name == course.lesson_name:
+                    score += getattr(h, "interest_score", 1.0)
+
+            # bonus αν skills ταιριάζουν με ιστορικό
+            user_skills = []
+            for h in user_history:
+                user_skills.extend(getattr(h, "skills", []))
+            course_skill_names = [cs.skill.skill_name for cs in course.skills]
+            common_skills = set(course_skill_names) & set(user_skills)
+
+            score += 0.5 * len(common_skills)
+
+            course_scores.append({"course_name": course.lesson_name, "score": score})
+
+        # Ταξινόμηση και επιλογή top N
+        top_recommendations = sorted(course_scores, key=lambda x: x["score"], reverse=True)[:top_n]
+
+        # Προσθήκη σημείωσης
+        for c in top_recommendations:
+            c["reason"] = "Based on your past selections"
+
+        return top_recommendations
+
+
+# ---------------------------
+# Endpoint για personalized history-based recommendations
+# ---------------------------
+@router.get("/recommend/personalized/history/{user_id}")
+def recommend_personalized_history(user_id: int, top_n: int = 10, db: Session = Depends(get_db)):
+    recommender = CourseRecommender(db)
+    results = recommender.recommend_based_on_history(user_id, top_n)
+    return {"user_id": user_id, "recommendations": results}

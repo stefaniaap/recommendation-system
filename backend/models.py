@@ -187,3 +187,25 @@ class SkillOccupation(Base):
     # Relationships
     skill = relationship("Skill", back_populates="occupations")
     occupation = relationship("Occupation", back_populates="skills")
+
+from sqlalchemy import DateTime
+from sqlalchemy.sql import func
+from sqlalchemy import Float
+
+class UserInteraction(Base):
+    __tablename__ = "user_interactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Χωρίς authentication – απλό user_id (π.χ. 1)
+    user_id = Column(Integer, index=True, nullable=False)
+
+    # Course seen / clicked
+    course_name = Column(String(255), index=True, nullable=False)
+
+    # Skills snapshot (ΠΟΛΥ σημαντικό: default=list)
+    skills = Column(JSON, default=list)
+
+    interest_score = Column(Float, default=1.0)  
+    # Timestamp
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())

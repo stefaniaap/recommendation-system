@@ -104,21 +104,7 @@ function generateMetricsBars(metrics) {
 }
 
 
-// =======================================================
-// 2. Event Handler: "Generate Course Recommendations" button
-// =======================================================
 
-/**
- * Redirect to the recommended degree plan page when a button is clicked
- * @param {Event} event
- */
-function handleRecommendCoursesClick(event) {
-    const button = event.target.closest('button');
-    const universityId = button.getAttribute('data-univ-id');
-    const degreeName = button.getAttribute('data-degree-name');
-    const encodedDegreeName = encodeURIComponent(degreeName);
-    window.location.href = `recommended_degree_plan.html?univ_id=${universityId}&degree_name=${encodedDegreeName}`;
-}
 
 
 // =======================================================
@@ -150,6 +136,8 @@ function displayRecommendations(recommendations, type, univId) {
     // Build HTML for each recommendation
     const htmlContent = recommendations.map((rec) => {
         const itemName = rec.degree || rec.degree_title || rec.course_name || 'Unknown Program';
+
+
 
         const scorePercent = rec.score != null ? Math.round(Math.max(1, Math.min(rec.score * 100, 100))) : '—';
         const itemColor = scoreToColor((rec.score || 0));
@@ -277,7 +265,75 @@ async function loadRecommendations() {
     } finally {
         loadingSpinner.style.display = 'none';
     }
+    // After main recommendations load:
+    displayPastRecommendations();
+
 }
 
 // Initialize recommendations on DOM content loaded
 document.addEventListener('DOMContentLoaded', loadRecommendations);
+
+
+function displayPastRecommendations() {
+    const viewed = getViewedDegrees();
+
+    const container = document.getElementById("past-recommendations");
+
+    if (viewed.length === 0) {
+        container.innerHTML = "<li>No history yet.</li>";
+        return;
+    }
+
+    container.innerHTML = viewed.map(v => `
+        <li class="recommendation-item recommendation-card">
+
+            <h4>${v}</h4>
+            <p>Because you viewed similar programs.</p>
+        </li>
+    `).join("");
+}
+
+/* =======================================================
+   HISTORY FUNCTIONS (LocalStorage)
+======================================================= */
+
+function saveViewedDegree(degreeName) {
+    let history = JSON.parse(localStorage.getItem("degreeHistory")) || [];
+
+    if (!history.includes(degreeName)) {
+        history.push(degreeName);
+    }
+
+    localStorage.setItem("degreeHistory", JSON.stringify(history));
+}
+
+function getViewedDegrees() {
+    return JSON.parse(localStorage.getItem("degreeHistory")) || [];
+}
+
+async function handleRecommendCoursesClick(event) {
+    const button = event.target.closest('button');
+    const universityId = button.getAttribute('data-univ-id');
+    const degreeName = button.getAttribute('data-degree-name');
+
+    // 1) Save to local browser history (frontend only)
+    saveViewedDegree(degreeName);
+
+    // 2) Send interaction to the backend
+    await fetch(`${API_BASE_URL}/interactions/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            user_id: 1,              // static user for now
+            course_name: degreeName, // what user clicked
+            interest_score: 1.0
+        })
+    });
+
+    // 3) Navigate to degree recommendation page
+    const encodedDegreeName = encodeURIComponent(degreeName);
+    window.location.href =
+        `recommended_degree_plan.html?univ_id=${universityId}&degree_name=${encodedDegreeName}`;
+
+}
+
