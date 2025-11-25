@@ -276,8 +276,8 @@ document.addEventListener('DOMContentLoaded', loadRecommendations);
 
 function displayPastRecommendations() {
     const viewed = getViewedDegrees();
-
     const container = document.getElementById("past-recommendations");
+
 
     if (viewed.length === 0) {
         container.innerHTML = "<li>No history yet.</li>";
@@ -285,13 +285,25 @@ function displayPastRecommendations() {
     }
 
     container.innerHTML = viewed.map(v => `
-        <li class="recommendation-item recommendation-card">
+    <li class="recommendation-item recommendation-card past-card" 
+        data-degree-name="${v}" data-univ-id="0" style="cursor:pointer;">
+        <h4>${v}</h4>
+        <p>Because you viewed similar programs.</p>
+    </li>
+`).join("");
 
-            <h4>${v}</h4>
-            <p>Because you viewed similar programs.</p>
-        </li>
-    `).join("");
+    // Click listener για κάθε παλαιό viewed πρόγραμμα
+    document.querySelectorAll('.past-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const degreeName = card.getAttribute('data-degree-name');
+            const univId = card.getAttribute('data-univ-id'); // 0 ή πραγματικό αν υπάρχει
+            window.location.href = `recommended_degree_plan.html?univ_id=${univId}&degree_name=${encodeURIComponent(degreeName)}`;
+        });
+    });
+
+
 }
+
 
 /* =======================================================
    HISTORY FUNCTIONS (LocalStorage)
@@ -337,3 +349,45 @@ async function handleRecommendCoursesClick(event) {
 
 }
 
+
+function setupCarousel() {
+    const track = document.querySelector('.carousel-track');
+    const leftBtn = document.querySelector('.carousel-btn.left');
+    const rightBtn = document.querySelector('.carousel-btn.right');
+
+    let currentIndex = 0;
+
+    function updateCarousel() {
+        const cardWidth = track.querySelector('li')?.offsetWidth || 220;
+        const gap = 20; // το ίδιο όπως στο CSS
+        const visibleCount = Math.floor(track.parentElement.offsetWidth / (cardWidth + gap));
+        const maxIndex = Math.max(track.children.length - visibleCount, 0);
+
+        // Περιορίζουμε το currentIndex
+        if (currentIndex > maxIndex) currentIndex = maxIndex;
+
+        track.style.transform = `translateX(-${currentIndex * (cardWidth + gap)}px)`;
+    }
+
+    leftBtn.addEventListener('click', () => {
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateCarousel();
+        }
+    });
+
+    rightBtn.addEventListener('click', () => {
+        const cardWidth = track.querySelector('li')?.offsetWidth || 220;
+        const gap = 20;
+        const visibleCount = Math.floor(track.parentElement.offsetWidth / (cardWidth + gap));
+        const maxIndex = Math.max(track.children.length - visibleCount, 0);
+
+        if (currentIndex < maxIndex) {
+            currentIndex++;
+            updateCarousel();
+        }
+    });
+
+    window.addEventListener('resize', updateCarousel);
+    updateCarousel(); // αρχική τοποθέτηση
+}

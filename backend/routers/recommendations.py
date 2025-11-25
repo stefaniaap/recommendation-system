@@ -341,6 +341,7 @@ def recommend_personalized(preferences: UserPreferences, db: Session = Depends(g
         
 from pydantic import BaseModel
 from backend.models import UserInteraction
+from backend.models import DegreeProgram, Course, UserInteraction
 
 class InteractionIn(BaseModel):
     user_id: int
@@ -377,80 +378,58 @@ def add_interaction(data: InteractionIn, db: Session = Depends(get_db)):
 # ---------------------------
 # Κλάση CourseRecommender
 # ---------------------------
-from collections import Counter
-
-class CourseRecommender:
-
+class DegreeRecommender:
     def __init__(self, db: Session):
         self.db = db
 
     def recommend_based_on_history(self, user_id: int, top_n: int = 10):
-        """
-        Recommend courses based on user past selections.
-        Now finds *similar courses* based on skill overlap,
-        NOT just the same courses user clicked.
-        """
-        # 1. Load user interaction history
-        history = self.db.query(UserInteraction).filter(
-            UserInteraction.user_id == user_id
-        ).all()
-
+        history = self.db.query(UserInteraction).filter(UserInteraction.user_id == user_id).all()
         if not history:
             return []
 
-        # 2. Collect all skills from user interactions
         user_skills = set()
         for h in history:
-            if h.skills:
-                user_skills.update(h.skills)
+            user_skills.update(h.skills or [])
 
-        # 3. Load all courses
-        all_courses = self.db.query(Course).all()
-
-        # 4. Find courses the user has already viewed
-        viewed_courses = set([h.course_name for h in history])
+        all_degrees = self.db.query(DegreeProgram).all()
+        viewed_degrees = set([h.course_name for h in history])
 
         recommendations = []
 
-        for course in all_courses:
-
-            # Skip already-viewed courses
-            if course.lesson_name in viewed_courses:
+        for degree in all_degrees:
+            if degree.name in viewed_degrees:
                 continue
 
-            # Get course skills
-            course_skill_names = [cs.skill.skill_name for cs in course.skills]
+            degree_skills = []
+            for m in degree.courses:
+                degree_skills.extend([s.skill_name for s in m.skills])
 
-            # Overlap score (similarity)
-            common_skills = user_skills & set(course_skill_names)
-            similarity_score = len(common_skills)
+            common_skills = user_skills & set(degree_skills)
+            score = len(common_skills)
 
-            # Only recommend if similarity > 0
-            if similarity_score > 0:
+            if score > 0:
                 recommendations.append({
-                    "course_name": course.lesson_name,
-                    "score": similarity_score,
-                    "common_skills": list(common_skills),
+                    "degree_name": degree.name,
+                    "score": score,
+                    "matching_skills": list(common_skills),
                     "reason": "Based on your past selections"
                 })
 
-        # 5. Sort by score DESC
-        recommendations = sorted(
-            recommendations, key=lambda x: x["score"], reverse=True
-        )[:top_n]
-
-        return recommendations
+        return sorted(recommendations, key=lambda x: x["score"], reverse=True)[:top_n]
 
 
 # ---------------------------
 # Endpoint για personalized history-based recommendations
 # ---------------------------
-@router.get("/recommend/personalized/history/{user_id}")
-def recommend_personalized_history(user_id: int, top_n: int = 10, db: Session = Depends(get_db)):
-    recommender = CourseRecommender(db)
+# ---------------------------
+# Endpoint για personalized history-based degree recommendations
+# ---------------------------
+@router.get("/recommend/degrees/history/{user_id}")
+def recommend_personalized_degree_history(user_id: int, top_n: int = 10, db: Session = Depends(get_db)):
+    recommender = DegreeRecommender(db)   # <-- εδώ χρησιμοποιούμε τη νέα κλάση
     results = recommender.recommend_based_on_history(user_id, top_n)
     
-    # Εδώ επιβεβαιώνουμε ότι κάθε αντικείμενο έχει score
+    # Επιβεβαίωση ότι κάθε αντικείμενο έχει score
     for r in results:
         if "score" not in r:
             r["score"] = 0.0

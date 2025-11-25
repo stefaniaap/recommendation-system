@@ -381,6 +381,61 @@
             }
         }
 
+        .past-recommendations-carousel {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .carousel-track-container {
+            overflow: hidden;
+            width: 80%;
+            /* Προσαρμόσιμο ανάλογα με τον χώρο */
+        }
+
+        .carousel-track {
+            display: flex;
+            gap: 20px;
+            transition: transform 0.4s ease;
+            padding: 0;
+            list-style: none;
+        }
+
+        .carousel-track li {
+            min-width: 220px;
+            background-color: var(--card-background);
+            border: 1px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .carousel-btn {
+            background-color: var(--analyst-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .carousel-btn:hover {
+            background-color: #82c78e;
+        }
+
+
+
         .sidebar-section-title {
             margin: 25px 0 8px 20px;
             font-size: 0.78em;
@@ -550,10 +605,19 @@
             <!-- List of recommendation cards -->
             <ul id="recommendation-list"></ul>
             <h3 style="margin-top:40px;">Based on your past selections</h3>
-            <ul id="past-recommendations"></ul>
+            <div class="past-recommendations-carousel">
+                <button class="carousel-btn left">&lt;</button>
+                <div class="carousel-track-container">
+                    <ul id="past-recommendations" class="carousel-track"></ul>
+                </div>
+                <button class="carousel-btn right">&gt;</button>
+            </div>
+
 
         </div>
     </div>
+
+
 
     <!-- Link to JavaScript that populates recommendations dynamically -->
     <script src="new_degree_purposals.js"></script>
