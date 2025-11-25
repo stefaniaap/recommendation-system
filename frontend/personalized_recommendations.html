@@ -455,6 +455,18 @@
             /* μικρή απόσταση από Analyst */
         }
 
+        #skillGraphContainer {
+            max-width: 900px;
+            margin: 50px auto 0 auto;
+            /* 50px πάνω + κεντράρισμα */
+        }
+
+        #skillGraphContainer h3 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
 
         /* Responsive tweak αν χρειαστεί */
         @media (max-width: 768px) {
@@ -554,11 +566,20 @@
 
             <!-- Results will be rendered here -->
             <div id="results"></div>
-        </div>
-    </div>
 
-    <!-- JavaScript file -->
-    <script src="personalized_recommendations.js"></script>
+
+
+        </div>
+        <div id="skillGraphContainer" style="display:none;">
+            <h3>Skill Map Visualization</h3>
+            <div id="skillGraph"
+                style="width:100%; height:500px; border:1px solid #ddd; border-radius:8px; margin-top:20px;"></div>
+        </div>
+        <!-- JavaScript file -->
+        <!-- JavaScript libraries -->
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+        <script src="personalized_recommendations.js"></script>
 </body>
+
 
 </html>

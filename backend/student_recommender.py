@@ -146,13 +146,15 @@ class CourseRecommender:
             sims = [0.0] * len(program_objs)
 
         # ---------------------------
+
         # Score and sort programs
         # ---------------------------
         scored_programs: List[Dict[str, Any]] = []
+
         for i, prog in enumerate(program_objs):
             score = float(sims[i]) if i < len(sims) else 0.0
 
-            # Small bonuses when filters align exactly (keeps behavior of original code)
+            # Small bonuses when filters align exactly
             if language and prog.language and prog.language.lower() == language.lower():
                 score += 0.05
             if degree_type and prog.degree_type and prog.degree_type.lower() == degree_type.lower():
@@ -160,14 +162,18 @@ class CourseRecommender:
             if country and prog.university.country and prog.university.country.lower() == country.lower():
                 score += 0.05
 
-            # Determine a human-friendly degree name. Original code attempted EL/EN selection.
             degree_name = "N/A"
             if prog.degree_titles:
                 if isinstance(prog.degree_titles, dict):
-                    # prefer Greek ('el') then English ('en'), else fallback to first available
-                    degree_name = prog.degree_titles.get("el") or prog.degree_titles.get("en") or str(prog.degree_titles)
+                    degree_name = (
+                        prog.degree_titles.get("el")
+                        or prog.degree_titles.get("en")
+                        or str(prog.degree_titles)
+                    )
                 else:
                     degree_name = str(prog.degree_titles)
+
+            prog_skills = self._get_program_skills(prog.program_id)
 
             scored_programs.append({
                 "program_id": prog.program_id,
@@ -176,10 +182,14 @@ class CourseRecommender:
                 "language": prog.language,
                 "country": getattr(prog.university, "country", None),
                 "degree_type": prog.degree_type,
-                "score": round(score, 3)
+                "score": round(score, 3),
+                "skills": prog_skills
             })
 
         scored_programs = sorted(scored_programs, key=lambda x: x["score"], reverse=True)[:top_n]
+
+
+
 
         # ---------------------------
         # Recommend standalone (unlinked) courses

@@ -202,11 +202,9 @@ function displayResults(data) {
 // Perform personalized search based on selected skills and filters
 // ======================================================
 async function performSearch() {
-    // Gather selected skills
     const selectedSkills = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
         .map(cb => cb.dataset.skillName);
 
-    // Build request payload
     const payload = {
         target_skills: selectedSkills,
         degree_type: document.getElementById("degreeType").value || null,
@@ -222,11 +220,24 @@ async function performSearch() {
         }).then(r => r.json());
 
         displayResults(data);
+
+        const recommendedFiltered = (data.recommended_programs || []).filter(p => ((p.score || 0) * 100) >= 20);
+
+        // Εμφάνιση skill graph container μόνο αν υπάρχουν αποτελέσματα
+        const skillGraphContainer = document.getElementById("skillGraphContainer");
+        if (recommendedFiltered.length > 0) {
+            skillGraphContainer.style.display = "block";
+            displaySkillGraph(data);
+        } else {
+            skillGraphContainer.style.display = "none";
+        }
+
     } catch (err) {
         console.error("Error fetching personalized recommendations:", err);
         alert("⚠️ Error fetching results");
     }
 }
+
 
 // ======================================================
 // Initialize page on DOMContentLoaded
@@ -236,3 +247,158 @@ document.addEventListener("DOMContentLoaded", () => {
     loadSkills();   // Load skill categories
     document.getElementById("searchBtn").addEventListener("click", performSearch); // Bind search button
 });
+
+
+
+// ======================================================
+// D3.js Skill Map Visualization - Enhanced
+// ======================================================
+async function displaySkillGraph(data) {
+    // Καθαρισμός προηγούμενου SVG
+    d3.select("#skillGraph svg").remove();
+    d3.select("#skillGraph div").remove(); // tooltip αν υπάρχει
+
+
+    const recommended = (data.recommended_programs || []).filter(p => ((p.score || 0) * 100) >= 20);
+    if (!recommended.length) return;
+
+    const width = document.getElementById("skillGraph").clientWidth;
+    const height = document.getElementById("skillGraph").clientHeight;
+
+    const nodes = [];
+    const links = [];
+    const skillSet = new Set();
+
+    // Δημιουργία nodes για προγράμματα και links προς δεξιότητες
+    recommended.forEach(p => {
+        nodes.push({ id: p.degree_name, type: "program", program: p });
+        (p.skills || []).forEach(skill => {
+            skillSet.add(skill);
+            links.push({ source: p.degree_name, target: skill });
+        });
+    });
+
+    // Δημιουργία nodes για δεξιότητες
+    skillSet.forEach(skill => nodes.push({ id: skill, type: "skill" }));
+
+    const svg = d3.select("#skillGraph")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    const color = d => d.type === "program" ? "#4a90e2" : "#27ae60";
+
+    const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(140))
+        .force("charge", d3.forceManyBody().strength(-450))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide(40));
+
+    // Links
+    const link = svg.append("g")
+        .attr("stroke", "#aaa")
+        .attr("stroke-width", 2)
+        .selectAll("line")
+        .data(links)
+        .enter()
+        .append("line");
+
+    // Nodes
+    const node = svg.append("g")
+        .selectAll("circle")
+        .data(nodes)
+        .enter()
+        .append("circle")
+        .attr("r", d => d.type === "program" ? 30 : 18)
+        .attr("fill", color)
+        .call(d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended)
+        );
+
+    // Labels
+    const label = svg.append("g")
+        .selectAll("text")
+        .data(nodes)
+        .enter()
+        .append("text")
+        .text(d => d.id)
+        .attr("font-size", "12px")
+        .attr("text-anchor", "middle")
+        .attr("dy", d => d.type === "program" ? 45 : 30);
+
+    // Tooltip
+    const tooltip = d3.select("#skillGraph")
+        .append("div")
+        .style("position", "absolute")
+        .style("padding", "6px 10px")
+        .style("background", "#fff")
+        .style("border", "1px solid #ccc")
+        .style("border-radius", "4px")
+        .style("pointer-events", "none")
+        .style("opacity", 0);
+
+    node.on("mouseover", (event, d) => {
+        let html = "";
+        if (d.type === "program" && d.program) {
+            html = `<b>${d.program.degree_name}</b><br>
+                ${d.program.university || ""}<br>
+                ${d.program.degree_type || ""}<br>
+                Skills: ${(d.program.skills || []).join(", ")}`;
+        } else {
+            html = `<b>${d.id}</b>`;
+        }
+        tooltip.html(html)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY + 10) + "px")
+            .transition().duration(200)
+            .style("opacity", 0.95);
+    }).on("mouseout", () => {
+        tooltip.transition().duration(200).style("opacity", 0);
+    });
+
+    // Simulation tick
+    simulation.on("tick", () => {
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        node
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y);
+
+        label
+            .attr("x", d => d.x)
+            .attr("y", d => d.y);
+    });
+
+    // Drag helpers
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+    const zoom = d3.zoom()
+        .scaleExtent([0.5, 3])
+        .on("zoom", (event) => {
+            svg.selectAll("g, line, circle, text").attr("transform", event.transform);
+        });
+
+    svg.call(zoom);
+
+
+}
+
