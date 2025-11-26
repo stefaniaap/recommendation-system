@@ -303,6 +303,7 @@
             margin-bottom: 15px;
             border-radius: 10px;
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+
         }
 
         .disabled-link {
@@ -493,10 +494,14 @@
 
             <!-- Search Results -->
             <div id="resultsContainer" style="margin-top:30px;"></div>
+            <canvas id="electivesChart" style="margin-top:40px; max-width:700px;"></canvas>
+
         </div>
     </div>
 
     <!-- External JS for handling dropdowns, skills selection, and search functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script src="degree_based_recommendations.js"></script>
 </body>
 

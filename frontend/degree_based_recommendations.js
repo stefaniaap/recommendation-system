@@ -180,7 +180,7 @@ async function performSearch() {
             return;
         }
 
-        // Show cards (WITHOUT website, and clickable)
+        // Render result cards
         resultsContainer.innerHTML = "";
         data.recommended_electives.forEach(course => {
             const card = document.createElement("div");
@@ -204,11 +204,17 @@ async function performSearch() {
             resultsContainer.appendChild(card);
         });
 
+        // ============================
+        // RENDER CHART HERE ↓
+        // ============================
+        renderChart(data.recommended_electives);
+
     } catch (err) {
         console.error(err);
         resultsContainer.innerHTML = "<p style='color:red;'>Error fetching recommendations.</p>";
     }
 }
+
 
 
 // ============================
@@ -259,3 +265,36 @@ document.addEventListener("DOMContentLoaded", () => {
     // Search button
     document.getElementById("searchBtn").addEventListener("click", performSearch);
 });
+let electivesChart = null;
+
+function renderChart(electives) {
+    const ctx = document.getElementById("electivesChart").getContext("2d");
+
+    const labels = electives.map(e => e.course_name);
+    const scores = electives.map(e => e.score);
+
+    // Destroy previous chart if exists
+    if (electivesChart) {
+        electivesChart.destroy();
+    }
+
+    electivesChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Recommendation Score",
+                data: scores,
+                backgroundColor: "rgba(54, 162, 235, 0.6)",
+                borderColor: "rgba(54, 162, 235, 1)",
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
