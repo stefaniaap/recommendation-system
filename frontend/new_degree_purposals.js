@@ -287,7 +287,8 @@ function displayPastRecommendations() {
         <li class="recommendation-item recommendation-card past-card" 
         data-degree-name="${v.degreeName}" data-univ-id="${v.univId}" style="cursor:pointer;">
 
-            <h4>${v}</h4>
+            <h4>${v.degreeName}</h4>
+
             <p>Because you viewed similar programs.</p>
         </li>
     `).join("");
