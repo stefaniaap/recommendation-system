@@ -273,23 +273,39 @@ async function loadRecommendations() {
 // Initialize recommendations on DOM content loaded
 document.addEventListener('DOMContentLoaded', loadRecommendations);
 
-
 function displayPastRecommendations() {
     const viewed = getViewedDegrees();
     const container = document.getElementById("past-recommendations");
 
-    if (viewed.length === 0) {
+    // --- NEW: Πάρε τις τρέχουσες recommendations από το DOM ---
+    let criteriaRecommendations = [];
+    document.querySelectorAll('.recommendation-item.recommendation-card:not(.past-card)').forEach(card => {
+        const degreeName = card.querySelector('.degree-name')?.childNodes[0]?.textContent.trim();
+        const univId = new URLSearchParams(window.location.search).get("univ_id");
+        if (degreeName) criteriaRecommendations.push({ degreeName, univId });
+    });
+
+    // --- NEW: Δημιουργία key set για dedupe ---
+    const criteriaKeySet = new Set(
+        criteriaRecommendations.map(r => `${r.degreeName}::${r.univId}`)
+    );
+
+    // --- NEW: Φιλτράρισμα viewed ώστε να μη διπλώνουν ---
+    const filteredViewed = viewed.filter(v =>
+        !criteriaKeySet.has(`${v.degreeName}::${v.univId}`)
+    );
+
+    // Αν είναι άδειο το filtered history
+    if (filteredViewed.length === 0) {
         container.innerHTML = "<li>No history yet.</li>";
         return;
     }
 
-    container.innerHTML = viewed.map(v => `
+    // Render ΜΟΝΟ τα filteredViewed
+    container.innerHTML = filteredViewed.map(v => `
         <li class="recommendation-item recommendation-card past-card" 
         data-degree-name="${v.degreeName}" data-univ-id="${v.univId}" style="cursor:pointer;">
-
             <h4>${v.degreeName}</h4>
-
-            <p>Because you viewed similar programs.</p>
         </li>
     `).join("");
 
@@ -302,7 +318,6 @@ function displayPastRecommendations() {
         });
     });
 
-    // --- Εδώ προσθέτεις το setupCarousel ---
     setupCarousel();
 }
 
@@ -335,7 +350,8 @@ async function handleRecommendCoursesClick(event) {
     const degreeName = button.getAttribute('data-degree-name');
 
     // 1) Save to local browser history (frontend only)
-    saveViewedDegree(degreeName);
+    saveViewedDegree(degreeName, universityId);
+
 
     // 2) Send interaction to the backend
     await fetch(`${API_BASE_URL}/interactions/add`, {
