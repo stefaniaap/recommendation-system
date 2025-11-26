@@ -270,13 +270,20 @@ let electivesChart = null;
 function renderChart(electives) {
     const ctx = document.getElementById("electivesChart").getContext("2d");
 
+    // Labels και scores
     const labels = electives.map(e => e.course_name);
     const scores = electives.map(e => e.score);
 
-    // Destroy previous chart if exists
-    if (electivesChart) {
-        electivesChart.destroy();
-    }
+    // Χρωματισμός bar ανάλογα με το πλήθος των matching skills
+    const backgroundColors = electives.map(e => {
+        const matchCount = e.matching_skills?.length || 0;
+        // Πιο έντονο μπλε όσο περισσότερα matching skills
+        const intensity = Math.min(255, 100 + matchCount * 20);
+        return `rgba(54, 162, ${intensity}, 0.6)`;
+    });
+
+    // Καταστρέφουμε προηγούμενο chart
+    if (electivesChart) electivesChart.destroy();
 
     electivesChart = new Chart(ctx, {
         type: "bar",
@@ -285,15 +292,44 @@ function renderChart(electives) {
             datasets: [{
                 label: "Recommendation Score",
                 data: scores,
-                backgroundColor: "rgba(54, 162, 235, 0.6)",
+                backgroundColor: backgroundColors,
                 borderColor: "rgba(54, 162, 235, 1)",
                 borderWidth: 1
             }]
         },
         options: {
             responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            const index = context.dataIndex;
+                            const course = electives[index];
+                            const matchingSkills = course.matching_skills?.join(', ') || 'None';
+                            const allSkills = course.skills?.join(', ') || 'None';
+                            return [
+                                `Score: ${course.score.toFixed(2)}`,
+                                `Skills: ${allSkills}`,
+                                `Matching Skills: ${matchingSkills}`
+                            ];
+                        }
+                    }
+                }
+            },
             scales: {
-                y: { beginAtZero: true }
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Recommendation Score'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Elective Courses'
+                    }
+                }
             }
         }
     });
