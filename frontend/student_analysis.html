@@ -7,6 +7,7 @@
     <title>Student Analyst Dashboard</title>
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         /* =============================
@@ -22,20 +23,21 @@
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             --active-sidebar-color: rgba(255, 255, 255, 0.1);
             --active-sidebar-text: white;
-            --font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
         }
 
         /* =============================
            Body and layout
            ============================= */
         body {
-            font-family: var(--font);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--background-color);
             margin: 0;
+            padding: 0;
             display: flex;
             min-height: 100vh;
-            /* Full viewport height */
         }
+
 
         /* =============================
            Sidebar styles
@@ -49,8 +51,7 @@
             flex-direction: column;
             align-items: center;
             box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
-            position: fixed;
-            height: 100%;
+
         }
 
         /* Logo section inside sidebar */
@@ -67,7 +68,7 @@
         }
 
         .logo-placeholder {
-            font-size: 2.2em;
+            font-size: 2em;
             font-weight: 700;
             color: var(--primary-color);
             text-align: center;
@@ -82,49 +83,58 @@
             width: 100%;
         }
 
+        /* Main links */
         .sidebar nav a {
             color: #ecf0f1;
             text-decoration: none;
-            padding: 10px 15px;
+            padding: 13px 15px;
+            /* ίδιο ύψος όπως στον πρώτο κώδικα */
             display: block;
-            margin-bottom: 10px;
-            border-radius: var(--border-radius);
+            margin-bottom: 13px;
+            /* ίδιο κενό μεταξύ links */
+            border-radius: 4px;
             transition: background-color 0.2s, color 0.2s;
-            font-size: 1em;
+
         }
 
-        /* Hover effect for navigation links */
+        /* Hover effect */
         .sidebar nav a:hover {
             background-color: var(--active-sidebar-color);
             color: var(--primary-color);
         }
 
-        /* Active link styling */
+        /* Active student link */
         .sidebar nav a.active-student {
             background-color: var(--active-sidebar-color);
             color: var(--active-sidebar-text);
             font-weight: 600;
         }
 
+
+
+
         /* Submenu items are indented */
         .submenu-item {
             padding-left: 35px !important;
             font-size: 0.9em !important;
             margin-top: -5px !important;
+
+
         }
+
+
 
         /* =============================
            Main content area
            ============================= */
         .main-content {
-            margin-left: 250px;
-            /* Leave space for sidebar */
-            flex-grow: 1;
+            flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 40px;
         }
+
 
         /* Container for the selection hub */
         .selection-hub {
@@ -201,13 +211,15 @@
         }
 
         .sidebar-section-title {
-            margin: 25px 0 8px 20px;
+            margin: 20px 0 5px 20px;
+            /* μικρότερο top & bottom για ομοιόμορφη απόσταση */
             font-size: 0.78em;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
             color: rgba(255, 255, 255, 0.85);
         }
+
 
         /* Απενεργοποιεί τα clicks για τα συγκεκριμένα links */
 
@@ -220,13 +232,7 @@
         /* ---------------------------
    SIDEBAR: Ισομερή απόσταση Home ↔ Analyst ↔ Student
 --------------------------- */
-        .sidebar nav a {
-            display: block;
-            padding: 12px 15px;
-            /* αυξημένο padding για πιο ομοιόμορφη απόσταση */
-            margin-bottom: 12px;
-            /* ίδιο κενό μεταξύ links */
-        }
+
 
 
         /* Αν θέλουμε πιο ακριβή απόσταση για συγκεκριμένα links */

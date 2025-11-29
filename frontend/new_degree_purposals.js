@@ -414,4 +414,3 @@ function setupCarousel() {
     window.addEventListener('resize', updateCarousel);
     updateCarousel();
 }
-

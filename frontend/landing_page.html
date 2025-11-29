@@ -57,7 +57,7 @@
             box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
         }
 
-        /* Logo Section */
+        /* Logo section at the top of sidebar */
         .logo-section {
             padding-bottom: 25px;
             margin-bottom: 25px;
@@ -65,16 +65,15 @@
             width: 100%;
         }
 
-        /* Make logo clickable without underline */
         .logo-section a {
             text-decoration: none;
+            /* Remove underline */
         }
 
         .logo-placeholder {
-            font-size: 2.2em;
+            font-size: 2em;
             font-weight: 700;
             color: var(--primary-color);
-            margin-bottom: 5px;
             text-align: center;
         }
 
@@ -82,7 +81,7 @@
             color: #ecf0f1;
         }
 
-        /* Sidebar navigation links */
+        /* Navigation links in sidebar */
         .sidebar nav {
             width: 100%;
         }
@@ -92,33 +91,33 @@
             text-decoration: none;
             padding: 10px 15px;
             display: block;
-            margin-bottom: 10px;
-            border-radius: var(--border-radius);
+            margin-bottom: 5px;
+            border-radius: 4px;
             transition: background-color 0.2s, color 0.2s;
-            font-size: 1em;
-            width: 100%;
-            text-align: left;
-            box-sizing: border-box;
         }
 
-        /* Hover effect for links */
+        /* Hover effect for sidebar links */
         .sidebar nav a:hover {
             background-color: var(--active-sidebar-color);
             color: var(--primary-color);
         }
 
-        /* Active page link styling */
+        /* Active landing page link styling */
         .sidebar nav a.active-landing {
             background-color: var(--active-sidebar-color);
             color: var(--active-sidebar-text);
             font-weight: 600;
         }
 
-        /* Submenu indentation styling */
+        /* Submenu items styling */
         .submenu-item {
             padding-left: 35px !important;
             font-size: 0.9em !important;
             margin-top: -5px !important;
+        }
+
+        .submenu-item.active {
+            color: var(--analyst-light-color);
         }
 
         /* ---------------------------
