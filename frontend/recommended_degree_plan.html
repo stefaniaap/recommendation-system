@@ -8,6 +8,7 @@
 
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         /* =====================================================
@@ -20,7 +21,7 @@
             --background-color: #f4f6f9;
             --sidebar-color: #2c3e50;
             --card-background: #ffffff;
-            --border-radius: 8px;
+            --border-radius: 12px;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             --active-sidebar-color: rgba(255, 255, 255, 0.1);
             --active-sidebar-text: white;
@@ -33,6 +34,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--background-color);
             margin: 0;
+            padding: 0;
             display: flex;
             min-height: 100vh;
             color: #333;
@@ -61,6 +63,8 @@
             height: 100%;
         }
 
+
+
         /* Back button styling */
         .back-button {
             color: var(--analyst-color);
@@ -86,7 +90,7 @@
         }
 
         .logo-placeholder {
-            font-size: 2.2em;
+            font-size: 2em;
             font-weight: 700;
             color: var(--primary-color);
             text-align: center;
@@ -102,24 +106,40 @@
         }
 
         .sidebar nav a {
+
             color: #ecf0f1;
+
             text-decoration: none;
-            padding: 10px 15px;
+
+            padding: 11px 15px;
+
+            /* ίδιο ύψος όπως στον πρώτο κώδικα */
+
             display: block;
-            margin-bottom: 10px;
-            border-radius: var(--border-radius);
+
+            margin-bottom: 12px;
+
+            /* ίδιο κενό μεταξύ links */
+
+            border-radius: 4px;
+
             transition: background-color 0.2s, color 0.2s;
-            font-size: 1em;
+
+
+
         }
+
+
 
         /* Hover effect for sidebar links */
         .sidebar nav a:hover {
-            background-color: var(--active-sidebar-color);
+            background-color: rgba(255, 255, 255, 0.1);
             color: var(--primary-color);
         }
 
+
         /* Active link styling */
-        .sidebar nav a.active-landing {
+        .sidebar nav a.active-student {
             background-color: var(--active-sidebar-color);
             color: var(--active-sidebar-text);
             font-weight: 600;
@@ -283,7 +303,7 @@
         }
 
         .sidebar-section-title {
-            margin: 25px 0 8px 20px;
+            margin: 20px 0 5px 20px;
             font-size: 0.78em;
             font-weight: 700;
             text-transform: uppercase;
@@ -294,21 +314,15 @@
         /* ---------------------------
    SIDEBAR: Ισομερή απόσταση Home ↔ Analyst ↔ Student
 --------------------------- */
-        .sidebar nav a {
-            display: block;
-            padding: 12px 15px;
-            /* αυξημένο padding για πιο ομοιόμορφη απόσταση */
-            margin-bottom: 12px;
-            /* ίδιο κενό μεταξύ links */
-        }
+
+
+
 
 
         /* Αν θέλουμε πιο ακριβή απόσταση για συγκεκριμένα links */
         .sidebar nav a.active-landing {
-            /* Home */
             margin-bottom: 12px;
         }
-
 
         .sidebar nav a[href="university_analysis.html"] {
             /* Analyst */
@@ -365,6 +379,20 @@
                 margin: 0;
             }
         }
+
+        @media (max-width: 720px) {
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                box-shadow: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+        }
     </style>
 </head>
 
@@ -376,37 +404,46 @@
         <div class="logo-section">
             <a href="landing_page.html">
                 <div class="logo-placeholder">
-                    <i class="fas fa-graduation-cap"></i> Edu <span>Recommender</span>
+                    <i class="fas fa-graduation-cap"></i> Edu <span style="color:white">Recommender</span>
                 </div>
             </a>
         </div>
+
         <nav>
             <a href="landing_page.html"><i class="fas fa-home"></i> Home</a>
+
             <a href="university_analysis.html"><i class="fas fa-chart-line"></i> Analyst Role</a>
+
             <div class="sidebar-section-title">Degree Development</div>
-            <a href="new_degree_purposals.html" class="submenu-item disabled-link"><i class="fas fa-lightbulb"></i> New
-                Degree
-                Proposals</a>
-            <a href="recommended_degree_plan.html" class="submenu-item active-landing"><i
-                    class="fas fa-graduation-cap"></i> Recommended Degree Plan</a>
+
+            <a href="new_degree_purposals.html" class="submenu-item disabled-link">
+                <i class="fas fa-lightbulb"></i> New Degree Proposals
+            </a>
+
+            <a href="recommended_degree_plan.html" class="submenu-item active-student">
+                <i class="fas fa-graduation-cap"></i> Recommended Degree Plan
+            </a>
 
             <div class="sidebar-section-title">Curriculum Tools</div>
-            <a href="curricumum_enhancement.html" class="submenu-item disabled-link disabled-link">
+
+            <a href="curricumum_enhancement.html" class="submenu-item disabled-link">
                 <i class="fas fa-layer-group"></i> Curriculum Enhancement
             </a>
 
-            <!-- Student Role Section -->
-            <a href="student_analysis.html" style="margin-top: 20px;">
-                <i class="fas fa-user-graduate"></i> Student Role
+            <a href="student_analysis.html" style="margin-top: 20px;"> <i class="fas fa-user-graduate"></i> Student Role
             </a>
+
             <a href="personalized_recommendations.html" class="submenu-item">
                 <i class="fas fa-compass"></i> Personalized Recommendations
             </a>
+
             <a href="degree_based_recommendations.html" class="submenu-item">
                 <i class="fas fa-brain"></i> Degree-Based Recommendations
             </a>
         </nav>
     </div>
+
+
 
     <!-- =====================================================
          Main content area

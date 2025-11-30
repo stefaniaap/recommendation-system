@@ -145,18 +145,28 @@
         --------------------------- */
         .main-content {
             margin-left: 250px;
-            /* Space for fixed sidebar */
+            /* για να μην καλύπτει το sidebar */
             flex-grow: 1;
             padding: 25px;
             display: flex;
             justify-content: center;
+            /* οριζόντια κεντράρισμα */
+            align-items: center;
+            /* κάθετο κεντράρισμα */
+            min-height: 100vh;
+            /* γεμίζει όλο το ύψος της οθόνης */
+            box-sizing: border-box;
+            flex-direction: column;
+            /* περιεχόμενο στοιβάζεται κάθετα */
         }
+
 
         .container {
             width: 100%;
             max-width: 1100px;
             text-align: center;
         }
+
 
         /* Page header section */
         .page-header {
@@ -166,7 +176,7 @@
 
         .page-header-title {
             color: #2c3e50;
-            font-size: 2.2em;
+            font-size: 2.3em;
             margin: 0 0 8px 0;
             font-weight: 700;
         }
@@ -207,10 +217,13 @@
 
         /* Individual recommendation card */
         .recommendation-card {
+            width: 100%;
+            /* γεμίζει όλο το container */
+            max-width: 1500px;
+            /* μέγιστο μέγεθος για μεγάλες οθόνες */
             background-color: var(--card-background);
             border: 1px solid #e0e0e0;
             border-left: 8px solid var(--analyst-color);
-            /* Highlight left border */
             border-radius: var(--border-radius);
             padding: 20px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);

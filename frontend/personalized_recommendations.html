@@ -44,7 +44,7 @@
            Body and Layout
         ====================================================== */
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--background-color);
             margin: 0;
             display: flex;
@@ -96,14 +96,13 @@
         }
 
         .sidebar nav a {
-            color: #ecf0f1;
-            text-decoration: none;
-            padding: 10px 15px;
             display: block;
-            margin-bottom: 5px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            text-decoration: none;
+            color: #ecf0f1;
             border-radius: 4px;
-            transition: background-color 0.2s, color 0.2s;
-
+            transition: 0.2s;
         }
 
         .sidebar nav a:hover {
@@ -111,8 +110,10 @@
             color: var(--primary-color);
         }
 
+
+
         /* Active page styling */
-        .sidebar nav a.active-student {
+        .active-student {
             background-color: var(--active-sidebar-color);
             color: var(--active-sidebar-text);
             font-weight: 600;
@@ -513,7 +514,9 @@
             <a href="curriculum_enhancement.html" class="submenu-item disabled-link"><i class="fas fa-layer-group"></i>
                 Curriculum
                 Enhancement</a>
-            <a href="student_analysis.html"><i class="fas fa-user-graduate"></i> Student Role</a>
+            <a href="student_analysis.html" style="margin-top:20px;"><i class="fas fa-user-graduate"></i> Student
+                Role</a>
+
             <a href="personalized_recommendations.html" class="active-student submenu-item"><i
                     class="fas fa-compass"></i> Personalized Recommendations</a>
             <a href="degree_based_recommendations.html" class="submenu-item"><i class="fas fa-brain"></i> Degree-Based

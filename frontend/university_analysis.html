@@ -120,20 +120,27 @@
         /* =============================
            Main content styling
            ============================= */
+        /* Main content styling tweak */
         .main-content {
             flex-grow: 1;
-            /* Take remaining width after sidebar */
             padding: 40px 20px;
             display: flex;
             justify-content: center;
+            /* οριζόντια κεντράρισμα */
             align-items: flex-start;
+            /* θα το αλλάξουμε σε center για να κατέβει λίγο */
+            min-height: 100vh;
+            /* για να καταλαμβάνει όλο το ύψος */
+            box-sizing: border-box;
         }
 
-        /* Container to center content and limit width */
+        /* Κάθετη τοποθέτηση του container */
         .container {
             width: 100%;
             max-width: 900px;
             text-align: center;
+            margin-top: 80px;
+            /* φέρνει λίγο πιο κάτω το περιεχόμενο */
         }
 
         /* Header section inside main content */
