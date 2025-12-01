@@ -177,6 +177,8 @@ async function performSearch() {
         // No results
         if (!data.recommended_electives || data.recommended_electives.length === 0) {
             resultsContainer.innerHTML = "<p>No recommended elective courses found.</p>";
+            document.getElementById('chartTitle').style.display = 'none';
+            if (electivesChart) electivesChart.destroy();
             return;
         }
 
@@ -193,7 +195,6 @@ async function performSearch() {
                 ${course.matching_skills?.length ? `<p><strong>Matching Skills:</strong> ${course.matching_skills.join(', ')}</p>` : ''}
             `;
 
-            // Make card clickable if website exists
             if (course.website) {
                 card.style.cursor = "pointer";
                 card.addEventListener("click", () => {
@@ -204,22 +205,29 @@ async function performSearch() {
             resultsContainer.appendChild(card);
         });
 
-        // ============================
-        // RENDER CHART HERE ↓
-        // ============================
+        // Show chart title
+        document.getElementById('chartTitle').style.display = 'block';
+
+        // Render chart
         renderChart(data.recommended_electives);
 
     } catch (err) {
         console.error(err);
         resultsContainer.innerHTML = "<p style='color:red;'>Error fetching recommendations.</p>";
+        document.getElementById('chartTitle').style.display = 'none';
+        if (electivesChart) electivesChart.destroy();
     }
 }
+
 
 
 
 // ============================
 // Event Listeners
 // ============================
+
+
+
 document.addEventListener("DOMContentLoaded", () => {
 
     // Load universities initially

@@ -230,6 +230,7 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
+
         /* Card hover effect */
         .recommendation-card:hover {
             transform: translateY(-3px);
@@ -531,6 +532,52 @@
                 order: 0;
                 margin: 0;
             }
+        }
+
+        .metric-item {
+            margin-bottom: 18px;
+        }
+
+        .metric-item p {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            /* BOLD LABEL */
+            font-size: 1em;
+            color: #374151;
+            /* Dark grey */
+            margin-bottom: 6px;
+        }
+
+        .metric-icon {
+            margin-right: 6px;
+            color: var(--analyst-color);
+        }
+
+        .metric-value {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .metric-bar-wrap {
+            background-color: #e8f0f2;
+            border-radius: 6px;
+            height: 12px;
+            overflow: hidden;
+        }
+
+        .metric-bar {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.4s ease;
+        }
+
+        /* Make Top Skills + Degree Metrics narrower */
+        .heatmap-section-full {
+            max-width: 1100px;
+            /* <-- άλλαξε το σε 240 / 280 / 300 όπως θες */
+            margin-left: 0;
+            margin-right: 0;
         }
     </style>
 </head>

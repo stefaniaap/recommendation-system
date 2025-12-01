@@ -3,7 +3,6 @@ const API_BASE_URL = 'http://localhost:8000';
 
 /**
  * Converts a normalized score (0–1) into a green color gradient.
- * Lower scores become light green, higher scores become dark green.
  */
 function scoreToCourseColor(score) {
     const clampedScore = Math.max(0, Math.min(1, score));
@@ -16,63 +15,42 @@ function scoreToCourseColor(score) {
 }
 
 /**
- * Creates a dual-dataset horizontal stacked bar chart showing:
- * - Compatible Skills
- * - New Skills
- * 
- * The chart:
- * - Displays a maximum of 5 courses (to avoid visual clutter)
- * - Dynamically adjusts the canvas height for readability
- * - Labels skill counts and lists the skills in tooltips
+ * Creates a horizontal stacked bar chart for skills per course
  */
 function displayCourseHeatmap(courses, topSkillsLimit = 5) {
-
-    // Step 1 — Filter courses that actually contain skills
     let validCourses = courses.filter(c => c.new_skills || c.compatible_skills);
 
-    // Limit displayed courses to a maximum of 5
     const maxCoursesToDisplay = 5;
     if (validCourses.length > maxCoursesToDisplay) {
         validCourses = validCourses.slice(0, maxCoursesToDisplay);
-        console.warn(`Displaying only the top ${maxCoursesToDisplay} courses for clarity.`);
     }
 
-    // If no valid courses exist, hide the chart
     if (!validCourses.length) {
-        console.warn("No courses with skills available for heatmap.");
         const canvas = document.getElementById('skillsHeatmapChart');
         if (canvas) canvas.style.display = 'none';
         return;
     }
 
-    // Prepare labels and skill counts
     const labels = validCourses.map(c => c.course_name || 'Unknown Course');
     const compatibleSkillsCount = validCourses.map(c => (c.compatible_skills || []).length);
     const newSkillsCount = validCourses.map(c => (c.new_skills || []).length);
     const allSkillsCount = compatibleSkillsCount.map((count, i) => count + newSkillsCount[i]);
     const maxSkillsForAxis = Math.max(...allSkillsCount, 1);
 
-    // Step 2 — Dynamically size the canvas according to number of bars
-    const courseCount = validCourses.length;
-    const dynamicHeight = (courseCount * 35) + 150;
     const canvas = document.getElementById('skillsHeatmapChart');
     if (canvas) {
-        canvas.style.height = `${dynamicHeight}px`;
+        canvas.style.height = `${(validCourses.length * 35) + 150}px`;
+        canvas.style.display = 'block';
     }
 
     const ctx = canvas ? canvas.getContext('2d') : null;
-    if (!ctx) {
-        console.error("Could not get 2D context for chart.");
-        return;
-    }
-    canvas.style.display = 'block';
+    if (!ctx) return;
 
-    // Step 3 — Build chart datasets
     const datasets = [
         {
             label: 'Compatible Skills (Existing)',
             data: compatibleSkillsCount,
-            backgroundColor: 'rgba(13,202,240,0.8)', // Blue
+            backgroundColor: 'rgba(13,202,240,0.8)',
             borderColor: '#0dcaf0',
             borderWidth: 1.2,
             borderRadius: 5,
@@ -81,7 +59,7 @@ function displayCourseHeatmap(courses, topSkillsLimit = 5) {
         {
             label: 'New Skills (Enhancement)',
             data: newSkillsCount,
-            backgroundColor: 'rgba(40, 167, 69, 0.9)', // Green
+            backgroundColor: 'rgba(40, 167, 69, 0.9)',
             borderColor: '#146c43',
             borderWidth: 1.2,
             borderRadius: 5,
@@ -89,16 +67,13 @@ function displayCourseHeatmap(courses, topSkillsLimit = 5) {
         }
     ];
 
-    // Destroy previous chart instance if it exists
     if (window.skillsHeatmapChart && typeof window.skillsHeatmapChart.destroy === 'function') {
         window.skillsHeatmapChart.destroy();
     }
 
-    // Update chart title dynamically
     document.querySelector('.chart-title').textContent =
         ` Skills Heatmap per Course (Top ${validCourses.length} Courses Breakdown)`;
 
-    // Step 4 — Create chart
     window.skillsHeatmapChart = new Chart(ctx, {
         type: 'bar',
         data: { labels, datasets },
@@ -148,25 +123,19 @@ function displayCourseHeatmap(courses, topSkillsLimit = 5) {
 }
 
 /**
- * Renders all recommended courses in the UI.
- * Displays:
- * - Score badge with color
- * - Preview of objectives & learning outcomes
- * - Full details in collapsible section
- * - Heatmap visualization
+ * Renders recommended courses
  */
 function displayCourseRecommendations(courses, degreeName) {
     const resultsContainer = document.getElementById('course-recommendation-list');
     const titleElement = document.getElementById('courses-title');
-    const loadingSpinner = document.getElementById('loading-spinner');
 
-    if (loadingSpinner) loadingSpinner.style.display = 'none';
     titleElement.textContent = ` Recommended Courses for: ${decodeURIComponent(degreeName)}`;
 
     if (!courses || courses.length === 0) {
         resultsContainer.innerHTML =
             `<li class="course-card" style="border-left-color: #dc3545;">❌ No recommended courses found.</li>`;
-        document.getElementById('skillsHeatmapChart').style.display = 'none';
+        const canvas = document.getElementById('skillsHeatmapChart');
+        if (canvas) canvas.style.display = 'none';
         return;
     }
 
@@ -204,8 +173,7 @@ function displayCourseRecommendations(courses, degreeName) {
 }
 
 /**
- * Loads all degree programs for a university
- * and populates the drop-down selection menu.
+ * Load degree programs
  */
 async function loadDegreePrograms(univId) {
     const dropdown = document.getElementById('degree-dropdown');
@@ -230,7 +198,9 @@ async function loadDegreePrograms(univId) {
     }
 }
 
-// Triggered when the user selects a degree from the dropdown
+/**
+ * Triggered when the user selects a degree
+ */
 document.getElementById('degree-dropdown').addEventListener('change', (event) => {
     const degreeName = event.target.value;
     const params = new URLSearchParams(window.location.search);
@@ -241,16 +211,10 @@ document.getElementById('degree-dropdown').addEventListener('change', (event) =>
 });
 
 /**
- * Fetches recommended courses from the backend
- * and sends them to the display function.
+ * Fetch recommended courses
  */
 async function fetchAndDisplayRecommendations(univId, degreeName) {
-    const headerElement = document.getElementById('courses-header');
-    const loadingSpinner = document.getElementById('loading-spinner');
     const listElement = document.getElementById('course-recommendation-list');
-
-    headerElement.textContent = `Loading courses...`;
-    loadingSpinner.style.display = 'block';
 
     const endpoint = `${API_BASE_URL}/recommend/courses/${univId}/${degreeName}`;
     try {
@@ -262,24 +226,21 @@ async function fetchAndDisplayRecommendations(univId, degreeName) {
 
     } catch (error) {
         console.error("Error loading courses:", error);
-        loadingSpinner.style.display = 'none';
         listElement.innerHTML =
             `<li class="course-card" style="border-left-color: #dc3545;">Failed to load data: ${error.message}</li>`;
+        const canvas = document.getElementById('skillsHeatmapChart');
+        if (canvas) canvas.style.display = 'none';
     }
 }
 
 /**
- * Initializes the page:
- * - Reads university ID from the URL
- * - Loads the university name
- * - Loads its degree programs
+ * Initialize page
  */
 async function initPage() {
     const params = new URLSearchParams(window.location.search);
     const univId = params.get('univ_id');
     if (!univId) return;
 
-    // Attempt to load university name
     let univName = `University ID: ${univId}`;
     try {
         const response = await fetch(`${API_BASE_URL}/universities`);

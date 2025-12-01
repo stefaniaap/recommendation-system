@@ -74,29 +74,45 @@ function generateMetricsBars(metrics) {
 
     return `
         <div class="heatmap-section-full">
-            <h5><i class="fas fa-chart-pie"></i> Degree Metrics</h5>
-            <div class="skill-bar">
-                <p>Frequency <span>${metrics.frequency}%</span></p>
-                <div class="bar-wrap">
-                    <div class="bar" style="width:${metrics.frequency}%; background-color: var(--analyst-color);"></div>
+            <h5>Degree Metrics</h5>
+
+            <div class="metric-item">
+                <p>
+                    <span style="font-weight:700;">Frequency</span>
+                    <span style="font-weight:700;">${metrics.frequency}%</span>
+                </p>
+                <div class="metric-bar-wrap">
+                    <div class="metric-bar" style="width:${metrics.frequency}%; background-color: var(--analyst-color);"></div>
                 </div>
             </div>
-            <div class="skill-bar">
-                <p>Compatibility <span>${metrics.compatibility}%</span></p>
-                <div class="bar-wrap">
-                    <div class="bar" style="width:${metrics.compatibility}%; background-color: var(--primary-color);"></div>
+
+            <div class="metric-item">
+                <p>
+                    <span style="font-weight:700;">Compatibility</span>
+                    <span style="font-weight:700;">${metrics.compatibility}%</span>
+                </p>
+                <div class="metric-bar-wrap">
+                    <div class="metric-bar" style="width:${metrics.compatibility}%; background-color: var(--primary-color);"></div>
                 </div>
             </div>
-            <div class="skill-bar">
-                <p>Novelty <span>${metrics.novelty}%</span></p>
-                <div class="bar-wrap">
-                    <div class="bar" style="width:${metrics.novelty}%; background-color: var(--info-blue-color);"></div>
+
+            <div class="metric-item">
+                <p>
+                    <span style="font-weight:700;">Novelty</span>
+                    <span style="font-weight:700;">${metrics.novelty}%</span>
+                </p>
+                <div class="metric-bar-wrap">
+                    <div class="metric-bar" style="width:${metrics.novelty}%; background-color: var(--info-blue-color);"></div>
                 </div>
             </div>
-            <div class="skill-bar">
-                <p>Skill Enrichment <span>${metrics.skill_enrichment}</span></p>
-                <div class="bar-wrap">
-                    <div class="bar" style="width:${Math.min(metrics.skill_enrichment * 20, 100)}%; background-color: var(--pastel-green);"></div>
+
+            <div class="metric-item">
+                <p>
+                    <span style="font-weight:700;">Skill Enrichment</span>
+                    <span style="font-weight:700;">${metrics.skill_enrichment}</span>
+                </p>
+                <div class="metric-bar-wrap">
+                    <div class="metric-bar" style="width:${Math.min(metrics.skill_enrichment * 20, 100)}%; background-color: var(--pastel-green);"></div>
                 </div>
             </div>
         </div>
