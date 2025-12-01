@@ -121,6 +121,31 @@ function generateMetricsBars(metrics) {
 
 
 
+// =======================================================
+// 1. NORMALIZATION + DEDUPE (ΝΕΟ - ΒΑΛΤΟ ΠΑΝΩ ΠΑΝΩ)
+// =======================================================
+
+function normalizeRec(rec) {
+    return {
+        name: rec.degree?.trim(),      // 🔥 μοναδικό πεδίο
+        degree_type: rec.degree_type || 'BSc/BA',
+        score: rec.score || 0,
+        top_skills: rec.top_skills || [],
+        metrics: rec.metrics || {}
+    };
+}
+
+function dedupeRecs(list) {
+    const map = new Map();
+    list.forEach(rec => {
+        const clean = normalizeRec(rec);
+        if (clean.name && !map.has(clean.name)) { // 🔥 μόνο βάση του name
+            map.set(clean.name, clean);
+        }
+    });
+    return Array.from(map.values());
+}
+
 
 
 // =======================================================
@@ -151,7 +176,8 @@ function displayRecommendations(recommendations, type, univId) {
 
     // Build HTML for each recommendation
     const htmlContent = recommendations.map((rec) => {
-        const itemName = rec.degree || rec.degree_title || rec.course_name || 'Unknown Program';
+        const itemName = rec.name;   // 🔥 πάντα 1 όνομα, πάντα καθαρό
+
 
 
 
@@ -265,10 +291,13 @@ async function loadRecommendations() {
 
         const data = await response.json();
         let recommendations = [];
-        if (type === 'degrees') recommendations = data.recommended_degrees || [];
-        else if (type === 'courses') recommendations = (data.recommendations?.new_degree_proposals) || [];
+        if (type === 'degrees') recommendations = dedupeRecs(data.recommended_degrees || []);
+        else if (type === 'courses') recommendations = dedupeRecs(data.recommendations?.new_degree_proposals || []);
 
         displayRecommendations(recommendations, type, univId);
+
+
+
 
     } catch (error) {
         console.error(`Error loading ${type} recommendations:`, error);
@@ -293,7 +322,7 @@ function displayPastRecommendations() {
     const viewed = getViewedDegrees();
     const container = document.getElementById("past-recommendations");
 
-    // --- NEW: Πάρε τις τρέχουσες recommendations από το DOM ---
+    // --- Πάρε τις τρέχουσες recommendations από το DOM ---
     let criteriaRecommendations = [];
     document.querySelectorAll('.recommendation-item.recommendation-card:not(.past-card)').forEach(card => {
         const degreeName = card.querySelector('.degree-name')?.childNodes[0]?.textContent.trim();
@@ -301,17 +330,19 @@ function displayPastRecommendations() {
         if (degreeName) criteriaRecommendations.push({ degreeName, univId });
     });
 
-    // --- NEW: Δημιουργία key set για dedupe ---
+    // --- Δημιουργία key set για τρέχοντα recommendations ---
+    // --- Δημιουργία key set για τρέχοντα recommendations ---
     const criteriaKeySet = new Set(
-        criteriaRecommendations.map(r => `${r.degreeName}::${r.univId}`)
+        criteriaRecommendations.map(r => r.degreeName) // μόνο το όνομα
     );
 
-    // --- NEW: Φιλτράρισμα viewed ώστε να μη διπλώνουν ---
+    // --- Φιλτράρισμα ιστορικού ώστε να μην εμφανίζονται πτυχία που είναι ήδη στα τρέχοντα ---
     const filteredViewed = viewed.filter(v =>
-        !criteriaKeySet.has(`${v.degreeName}::${v.univId}`)
+        !criteriaKeySet.has(v.degreeName) // μόνο βάση name
     );
 
-    // Αν είναι άδειο το filtered history
+
+    // Αν δεν υπάρχουν παλαιά recommendations
     if (filteredViewed.length === 0) {
         container.innerHTML = "<li>No history yet.</li>";
         return;
@@ -320,7 +351,7 @@ function displayPastRecommendations() {
     // Render ΜΟΝΟ τα filteredViewed
     container.innerHTML = filteredViewed.map(v => `
         <li class="recommendation-item recommendation-card past-card" 
-        data-degree-name="${v.degreeName}" data-univ-id="${v.univId}" style="cursor:pointer;">
+            data-degree-name="${v.degreeName}" data-univ-id="${v.univId}" style="cursor:pointer;">
             <h4>${v.degreeName}</h4>
         </li>
     `).join("");
@@ -339,25 +370,25 @@ function displayPastRecommendations() {
 
 
 
+
 /* =======================================================
    HISTORY FUNCTIONS (LocalStorage)
 ======================================================= */
+function getViewedDegrees() {
+    return JSON.parse(localStorage.getItem("degreeHistory")) || [];
+}
 
 function saveViewedDegree(degreeName, univId) {
     let history = JSON.parse(localStorage.getItem("degreeHistory")) || [];
-    const entry = { degreeName, univId };
+    const entry = { degreeName: degreeName.trim(), univId };
 
-    // Αποφυγή duplicates
-    if (!history.some(h => h.degreeName === degreeName && h.univId === univId)) {
-        history.push(entry);
-    }
+    // Αποφυγή διπλών
+    history = history.filter(h => !(h.degreeName === entry.degreeName && h.univId === entry.univId));
+    history.push(entry);
 
     localStorage.setItem("degreeHistory", JSON.stringify(history));
 }
 
-function getViewedDegrees() {
-    return JSON.parse(localStorage.getItem("degreeHistory")) || [];
-}
 
 
 async function handleRecommendCoursesClick(event) {

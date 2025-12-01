@@ -29,58 +29,84 @@ class CourseRecommender:
 # ---------------------------
 # Νέα μέθοδος: History-based recommendations
 # ---------------------------
-    def recommend_based_on_history(
-        self,
-        user_id: int,
-        top_n: int = 10
-    ):
-        """
-        Recommend courses based on the user's past selections/interactions.
-        Combines personalized preferences with history-aware scoring.
-        """
-        # 1️⃣ Συλλογή ιστορικού χρήστη
-        from backend.models import UserInteraction  # assume table exists
-        user_history = self.db.query(UserInteraction)\
-                            .filter(UserInteraction.user_id == user_id,
-                                    UserInteraction.course_name != None)\
-                            .all()
-        if not user_history:
-            return []  # Δεν υπάρχει ιστορικό, fallback σε default personalized
+def recommend_based_on_history(self, user_id: int, top_n: int = 10):
+    def normalize_name(n: str) -> str:
+        if not n:
+            return ""
+        # collapse multiple whitespace, strip, and casefold for stable comparison
+        return " ".join(n.split()).casefold()
 
-        # 2️⃣ Μετράμε τις πιο συχνές επιλογές του χρήστη
-        course_counter = Counter([h.course_name for h in user_history])
-        most_selected_courses = [c for c, _ in course_counter.most_common(50)]  # top 50 history
+    history = self.db.query(UserInteraction).filter(UserInteraction.user_id == user_id).all()
+    if not history:
+        return []
 
-        # 3️⃣ Ανάκτηση όλων διαθέσιμων μαθημάτων
-        all_courses = self.db.query(Course).all()  # assume Course model exists
-        course_scores = []
+    # collect user skills (filter None, normalize skill names too)
+    user_skills = set()
+    for h in history:
+        if h.skills:
+            for sk in h.skills:
+                if sk:
+                    user_skills.add(" ".join(str(sk).split()))
 
-        # 4️⃣ Σκοράρισμα με βάση similarity με ιστορικό
-        for course in all_courses:
-            score = 0.0
+    all_degrees = self.db.query(DegreeProgram).all()
+    viewed_courses = {h.course_name for h in history if h.course_name}
 
-            # bonus αν το course είναι ίδιο με προηγούμενες επιλογές
-            if course.lesson_name in most_selected_courses:
-                score += 1.0
+    temp_recs = []
+    for degree in all_degrees:
+        # skip degree if user already viewed any course of that degree
+        degree_course_names = {c.lesson_name for c in getattr(degree, "courses", []) if c.lesson_name}
+        if viewed_courses & degree_course_names:
+            continue
 
-            # bonus αν τα skills του course εμφανίζονται συχνά στο ιστορικό
-            user_skills = []
-            for h in user_history:
-                user_skills.extend(getattr(h, "skills", []))  # προσαρμόστε αν χρειάζεται
-            common_skills = set(getattr(course, "skills", [])) & set(user_skills)
-            score += 0.5 * len(common_skills)
+        degree_skills = []
+        for course in getattr(degree, "courses", []) or []:
+            for s in getattr(course, "skills", []) or []:
+                name = getattr(s, "skill_name", None)
+                if name:
+                    degree_skills.append(" ".join(str(name).split()))
 
-            # τελικό score μπορεί να προσαρμοστεί με TF-IDF ή collaborative filtering
-            course_scores.append({"course_name": course.lesson_name, "score": score})
+        common_skills = user_skills & set(degree_skills)
+        score = len(common_skills)
+        if score > 0:
+            temp_recs.append({
+                "degree_name": degree.name or "",
+                "degree_name_norm": normalize_name(degree.name or ""),
+                "score": float(score),
+                "matching_skills": list(common_skills),
+                "source_universities": [getattr(degree, "institution", None)]  # προαιρετικό
+            })
 
-        # 5️⃣ Ταξινόμηση και επιλογή top N
-        top_recommendations = sorted(course_scores, key=lambda x: x["score"], reverse=True)[:top_n]
+    # Deduplicate by normalized name, keep entry with highest score and merge skills/sources
+    unique = {}
+    for r in temp_recs:
+        key = r["degree_name_norm"]
+        if not key:
+            continue
+        if key not in unique:
+            unique[key] = {
+                "degree_name": r["degree_name"],
+                "score": r["score"],
+                "matching_skills": set(r["matching_skills"]),
+                "source_universities": list(filter(None, r.get("source_universities", [])))
+            }
+        else:
+            # keep the one with higher score (or update score to max)
+            unique[key]["score"] = max(unique[key]["score"], r["score"])
+            unique[key]["matching_skills"].update(r["matching_skills"])
+            unique[key]["source_universities"].extend(filter(None, r.get("source_universities", [])))
 
-        # 6️⃣ Προσθήκη σημείωσης “based on your past selections”
-        for c in top_recommendations:
-            c["reason"] = "Based on your past selections"
+    final_results = []
+    for v in unique.values():
+        final_results.append({
+            "degree_name": v["degree_name"],
+            "score": v["score"],
+            "matching_skills": sorted(list(v["matching_skills"])),
+            "source_universities": sorted(list(set(v["source_universities"])))
+        })
 
-        return top_recommendations
+    return sorted(final_results, key=lambda x: x["score"], reverse=True)[:top_n]
+
+
 
 @router.get("/recommend/personalized/history/{user_id}")
 def recommend_personalized_history(user_id: int, top_n: int = 10, db: Session = Depends(get_db)):
@@ -383,39 +409,84 @@ class DegreeRecommender:
         self.db = db
 
     def recommend_based_on_history(self, user_id: int, top_n: int = 10):
-        history = self.db.query(UserInteraction).filter(UserInteraction.user_id == user_id).all()
+
+        # --- helper for perfect deduplication ---
+        def normalize(name: str) -> str:
+            if not name:
+                return ""
+            n = name.replace("\u00A0", " ")      # non-breaking spaces → normal spaces
+            n = " ".join(n.split())              # collapse multiple spaces
+            return n.strip().lower()             # trim + lowercase
+
+        # --- load user history ---
+        history = (
+            self.db.query(UserInteraction)
+            .filter(UserInteraction.user_id == user_id)
+            .all()
+        )
+
         if not history:
             return []
 
+        # collect user skills
         user_skills = set()
         for h in history:
-            user_skills.update(h.skills or [])
+            if h.skills:
+                for s in h.skills:
+                    if s:
+                        user_skills.add(" ".join(s.split()))
 
+        # load all degrees
         all_degrees = self.db.query(DegreeProgram).all()
-        viewed_degrees = set([h.course_name for h in history])
+
+        # courses user already viewed
+        viewed_courses = {h.course_name for h in history if h.course_name}
 
         recommendations = []
 
+        # --- build raw recommendations ---
         for degree in all_degrees:
-            if degree.name in viewed_degrees:
+            degree_course_names = {
+                c.lesson_name for c in degree.courses if c.lesson_name
+            }
+
+            # skip degrees that user already saw
+            if viewed_courses & degree_course_names:
                 continue
 
             degree_skills = []
-            for m in degree.courses:
-                degree_skills.extend([s.skill_name for s in m.skills])
+            for course in degree.courses:
+                for sk in course.skills:
+                    if sk.skill_name:
+                        degree_skills.append(" ".join(sk.skill_name.split()))
 
-            common_skills = user_skills & set(degree_skills)
-            score = len(common_skills)
+            common = user_skills & set(degree_skills)
+            score = len(common)
 
             if score > 0:
                 recommendations.append({
-                    "degree_name": degree.name,
+                    "degree_name": degree.name or "",
                     "score": score,
-                    "matching_skills": list(common_skills),
+                    "matching_skills": list(common),
                     "reason": "Based on your past selections"
                 })
 
-        return sorted(recommendations, key=lambda x: x["score"], reverse=True)[:top_n]
+        # --- REAL DUPLICATE FIX ---
+        unique = {}
+        for r in recommendations:
+            key = normalize(r["degree_name"])
+            if key not in unique:
+                unique[key] = r
+            else:
+                # keep max score and merge skills
+                unique[key]["score"] = max(unique[key]["score"], r["score"])
+                unique[key]["matching_skills"] = sorted(
+                    list(set(unique[key]["matching_skills"]) | set(r["matching_skills"]))
+                )
+
+        final_results = list(unique.values())
+
+        return sorted(final_results, key=lambda x: x["score"], reverse=True)[:top_n]
 
 
 # ---------------------------
@@ -435,3 +506,72 @@ def recommend_personalized_degree_history(user_id: int, top_n: int = 10, db: Ses
             r["score"] = 0.0
     
     return {"user_id": user_id, "recommendations": results}
+
+
+
+    # --------------------------------------------
+# Unified Degree Recommendation Endpoint
+# --------------------------------------------
+@router.get("/recommend/degrees/combined/{user_id}/{university_id}")
+def recommend_degrees_combined(
+    user_id: int,
+    university_id: int,
+    top_n: int = 10,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns both main recommended degrees AND history-based degree recommendations,
+    while removing duplicates between the two lists.
+    """
+
+    # 1️⃣ Load MAIN recommended degrees (University-based)
+    main_results = UniversityRecommender(db).suggest_degrees_with_skills(
+        university_id,
+        top_n=top_n
+    )
+
+    # Normalize structure → convert to simple list of names
+    recommended_degrees = []
+    for r in main_results:
+        recommended_degrees.append({
+            "name": r.get("degree_title") or r.get("degree_name") or "",
+            "score": r.get("score", 0.0),
+            "skills": r.get("skills", []),
+            "source": "main"
+        })
+
+    # 2️⃣ Load HISTORY-based recommendations
+    history_results = DegreeRecommender(db).recommend_based_on_history(
+        user_id,
+        top_n=top_n
+    )
+
+    # Standardize names
+    history_degrees = []
+    for r in history_results:
+        history_degrees.append({
+            "name": r.get("degree_name") or "",
+            "score": r.get("score", 0.0),
+            "skills": r.get("matching_skills", []),
+            "source": "history"
+        })
+
+    # 3️⃣ Remove duplicates (History must NOT repeat Main)
+    def normalize(n: str):
+        return " ".join(str(n).split()).lower()
+
+    main_names = {normalize(d["name"]) for d in recommended_degrees}
+
+    filtered_history = [
+        d for d in history_degrees
+        if normalize(d["name"]) not in main_names
+    ]
+
+    # 4️⃣ FINAL RESPONSE
+    return {
+        "user_id": user_id,
+        "university_id": university_id,
+        "recommended_degrees": recommended_degrees,
+        "history_degrees": filtered_history,
+    }
+
