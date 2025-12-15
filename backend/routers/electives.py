@@ -5,10 +5,16 @@ from typing import List
 from backend.database import get_db
 from backend.models import DegreeProgram, Skill
 from backend.student_recommender import CourseRecommenderV4
-from backend.schemas import ElectiveRecommendationRequest
 from backend.models import Course
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from backend.schemas import (
+    ElectiveRecommendationRequest,
+    ElectiveRecommendationResponse,
+    ElectiveEnhancedRequest,
+    ElectiveEnhancedResponse,
+    ElectiveEnhancedCourseOut,
+)
 
 router = APIRouter()
 
@@ -169,3 +175,26 @@ def get_program_semesters(univ_id: int, program_id: int, db: Session = Depends(g
 
     semesters = list(range(1, num_semesters + 1))
     return {"semesters": semesters}
+
+
+@router.post(
+    "/universities/{univ_id}/degrees/electives/enhanced",
+    summary="Enhanced elective recommendation with scoring, overlap, and explanations"
+)
+def recommend_electives_enhanced(
+    univ_id: int,
+    payload: ElectiveRecommendationRequest,
+    semester: str = Query(None),
+    min_overlap_ratio: float = 0.1,
+    db: Session = Depends(get_db)
+):
+    recommender = CourseRecommenderV4(db)
+    result = recommender.recommend_electives_for_degree_enhanced(
+        univ_id=univ_id,
+        program_id=payload.program_id,
+        target_skills=payload.target_skills,
+        top_n=payload.top_n,
+        min_overlap_ratio=min_overlap_ratio,
+        semester=semester
+    )
+    return result

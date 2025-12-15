@@ -1,5 +1,4 @@
 # schemas.py
-
 from typing import List, Dict, Optional, Any
 from pydantic import BaseModel, Field
 
@@ -137,3 +136,87 @@ class ElectiveRecommendationResponse(BaseModel):
     message: Optional[str] = ""
     meta: Optional[Dict[str, Any]] = {}
 
+# =======================================================
+# Enhanced Electives (CourseRecommenderV4)
+# =======================================================
+class ElectiveEnhancedRequest(BaseModel):
+    univ_id: int
+    program_id: int
+    target_skills: List[str]
+    top_n: int = 10
+    min_overlap_ratio: float = 0.1
+    semester: Optional[int] = None
+
+
+class ElectiveEnhancedCourseOut(BaseModel):
+    course_id: Optional[int] = None
+    lesson_name: Optional[str] = None
+    university: Optional[str] = None
+    final_score: float = Field(..., ge=0.0, le=1.0)
+    tfidf_score: float = Field(..., ge=0.0)
+    overlap_ratio: float = Field(..., ge=0.0, le=1.0)
+    matching_skills: List[str] = []
+    missing_skills: List[str] = []
+    skills: List[str] = []
+    reason: Optional[str] = ""
+    website: Optional[str] = None
+
+
+class ElectiveEnhancedResponse(BaseModel):
+    recommended_electives: List[ElectiveEnhancedCourseOut] = []
+    meta: Dict[str, Any] = {}
+    message: Optional[str] = None
+
+
+# =======================================================
+# University-level recommender (UniversityRecommender)
+# =======================================================
+class UniversityProfileOut(BaseModel):
+    university_id: int
+    skills: List[str]
+    courses: List[str]
+    degrees: List[str]
+
+
+class SimilarUniversityOut(BaseModel):
+    university_id: int
+    name: str
+    country: str
+    similarity_score: float
+
+
+class DegreeSkillOut(BaseModel):
+    skill_name: str
+    skill_score: float
+
+
+class DegreeWithSkillsOut(BaseModel):
+    degree: str
+    degree_type: str
+    score: float
+    top_skills: List[DegreeSkillOut]
+    metrics: Dict[str, Any]
+
+
+class DegreesWithSkillsResponse(BaseModel):
+    university_id: int
+    recommendations: List[DegreeWithSkillsOut]
+
+
+# =======================================================
+# Course recommender for universities
+#    (course_recommender_for_university.CourseRecommender)
+# =======================================================
+class ExistingDegreeCourseRequest(BaseModel):
+    univ_id: int
+    program_id: int
+    degree_title: str
+    top_n: int = 10
+
+
+class NewDegreeCourseRequest(BaseModel):
+    univ_id: int
+    degree_type: str
+    degree_title: str
+    target_skills: List[str] = []
+    top_n: int = 10

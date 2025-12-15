@@ -6,11 +6,22 @@ import logging
 
 from backend.database import get_db
 from backend.models import University
-from backend.schemas import CourseRecommendationsResponse, DegreeProgramOut, UserPreferences
 from backend.course_recommender_for_university import CourseRecommender as CourseRecommenderV2
 from backend.degree_recommender_for_university import UniversityRecommender
 from backend.student_recommender import CourseRecommender as CourseRecommenderV3
 from backend.models import Course
+
+from backend.schemas import (
+    UserPreferences,
+    CourseRecommendationsResponse,
+    RecommendedCourse,
+    UniversityProfileOut,
+    SimilarUniversityOut,
+    DegreeWithSkillsOut,
+    DegreesWithSkillsResponse,
+    ExistingDegreeCourseRequest,
+    NewDegreeCourseRequest,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -575,3 +586,93 @@ def recommend_degrees_combined(
         "history_degrees": filtered_history,
     }
 
+@router.get(
+    "/recommend/universities/{univ_id}/profile",
+    summary="Get profile of a university (skills, degrees, courses)"
+)
+def get_university_profile(univ_id: int, db: Session = Depends(get_db)):
+    recommender = UniversityRecommender(db)
+    profile = recommender.build_university_profile(univ_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="No profile found.")
+    return profile
+
+
+@router.get(
+    "/recommend/universities/{univ_id}/similar",
+    summary="Find similar universities based on skills, degrees, courses"
+)
+def find_similar_universities(univ_id: int, top_n: int = 5, db: Session = Depends(get_db)):
+    recommender = UniversityRecommender(db)
+    return recommender.find_similar_universities(univ_id, top_n)
+
+
+@router.post(
+    "/recommend/universities/{univ_id}/programs/{program_id}/courses-existing-degree",
+    summary="Recommend new courses for an existing degree."
+)
+def recommend_courses_for_existing_degree(
+    univ_id: int,
+    program_id: int,
+    request: ExistingDegreeCourseRequest,
+    db: Session = Depends(get_db)
+):
+    recommender = CourseRecommenderV2(db)
+    profiles = recommender.build_degree_profiles(univ_id)
+
+    target = None
+    for p in profiles:
+        if p["program_id"] == program_id:
+            target = p
+            break
+
+    if not target:
+        raise HTTPException(status_code=404, detail="Degree profile not found.")
+
+    all_profiles = []
+    for u in recommender.get_all_universities():
+        all_profiles.extend(recommender.build_degree_profiles(u.university_id))
+
+    similar = recommender.find_similar_degrees(target, all_profiles, top_n=10)
+
+    result = recommender.suggest_courses_for_degree(
+        target_degree=target,
+        similar_degrees=similar,
+        top_n=request.top_n
+    )
+
+    return {"university_id": univ_id, "program_id": program_id, "recommendations": result}
+
+@router.post(
+    "/recommend/universities/{univ_id}/courses-new-degree",
+    summary="Recommend courses for a new custom degree."
+)
+def recommend_courses_new_degree(
+    univ_id: int,
+    request: NewDegreeCourseRequest,
+    db: Session = Depends(get_db)
+):
+    recommender = CourseRecommenderV2(db)
+
+    all_profiles = []
+    for u in recommender.get_all_universities():
+        all_profiles.extend(recommender.build_degree_profiles(u.university_id))
+
+    synthetic_profile = {
+        "university_id": univ_id,
+        "program_id": None,
+        "degree_title": request.degree_title,
+        "degree_type": request.degree_type,
+        "skills": request.target_skills,
+        "courses": []
+    }
+
+    similar = recommender.find_similar_degrees(synthetic_profile, all_profiles, top_n=10)
+
+    result = recommender.suggest_courses_for_new_degree(
+        similar_degrees=similar,
+        target_skills=request.target_skills,
+        top_n=request.top_n
+    )
+
+    return {"university_id": univ_id, "degree": request.degree_title, "recommendations": result}
