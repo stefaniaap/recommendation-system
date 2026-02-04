@@ -27,16 +27,42 @@ async function loadPrograms(univId) {
         const response = await fetch(`${API_BASE}/universities/${univId}/degrees`);
         const degrees = await response.json();
 
+        // 1️⃣ Αφαίρεση διπλοτύπων (με βάση τον πρώτο τίτλο ή το degree_type)
+        const uniqueMap = new Map();
         degrees.forEach(degree => {
-            const option = document.createElement('option');
-            option.value = degree.program_id;
-            option.textContent = `${degree.degree_type}: ${Array.isArray(degree.degree_titles) ? degree.degree_titles.join(', ') : ''}`;
-            dropdown.appendChild(option);
+            const title = Array.isArray(degree.degree_titles) && degree.degree_titles.length
+                ? degree.degree_titles[0]
+                : degree.degree_type;
+            if (!title) return;
+
+            if (!uniqueMap.has(title)) {
+                uniqueMap.set(title, {
+                    value: degree.program_id,
+                    text: `${degree.degree_type}: ${Array.isArray(degree.degree_titles) ? degree.degree_titles.join(', ') : ''}`
+                });
+            }
         });
+
+        // 2️⃣ Αλφαβητική ταξινόμηση με βάση το text
+        const sortedDegrees = [...uniqueMap.values()].sort((a, b) =>
+            a.text.localeCompare(b.text, 'el') // 'el' για ελληνικά
+        );
+
+        // 3️⃣ Προσθήκη στο dropdown
+        const fragment = document.createDocumentFragment();
+        sortedDegrees.forEach(deg => {
+            const option = document.createElement('option');
+            option.value = deg.value;
+            option.textContent = deg.text;
+            fragment.appendChild(option);
+        });
+        dropdown.appendChild(fragment);
+
     } catch (error) {
         console.error("Error loading degree programs:", error);
     }
 }
+
 
 // ============================
 // Load elective skills for a selected university and program

@@ -184,12 +184,35 @@ async function loadDegreePrograms(univId) {
         if (!response.ok) throw new Error('Failed to fetch degrees');
 
         const degrees = await response.json();
+
+        // 1️⃣ Remove duplicates (key = degree title)
+        const uniqueMap = new Map();
+
         degrees.forEach(degree => {
+            const title = degree.degree_titles?.[0] || degree.degree_type;
+            if (!title) return;
+
+            if (!uniqueMap.has(title)) {
+                uniqueMap.set(title, {
+                    value: encodeURIComponent(title),
+                    text: `${degree.degree_type}: ${degree.degree_titles?.join(', ') || ''}`
+                });
+            }
+        });
+
+        // 2️⃣ Alphabetical sorting
+        const sortedDegrees = [...uniqueMap.values()].sort((a, b) =>
+            a.text.localeCompare(b.text, 'el')
+        );
+
+        // 3️⃣ Render dropdown
+        sortedDegrees.forEach(deg => {
             const option = document.createElement('option');
-            option.value = encodeURIComponent(degree.degree_titles?.[0] || degree.degree_type);
-            option.textContent = `${degree.degree_type}: ${degree.degree_titles?.join(', ') || ''}`;
+            option.value = deg.value;
+            option.textContent = deg.text;
             dropdown.appendChild(option);
         });
+
     } catch (error) {
         console.error("Error loading degrees:", error);
         const option = document.createElement('option');
