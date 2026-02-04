@@ -79,15 +79,17 @@ def get_degree_programs(univ_id: int, db: Session = Depends(get_db)):
 
 @router.get("/metrics/{university_id}", summary="Return basic metrics for a university.")
 def get_university_metrics(university_id: int, db: Session = Depends(get_db)):
-    """
-    Return metrics for a university including total degree programs and number of unique recognized skills.
-    """
     university = db.query(University).filter_by(university_id=university_id).first()
     if not university:
         raise HTTPException(status_code=404, detail="University not found")
 
-    total_programs = len(university.programs)
-   
+    # Total degree programs
+    total_programs = (
+        db.query(func.count(DegreeProgram.program_id))
+        .filter(DegreeProgram.university_id == university_id)
+        .scalar()
+    )
+
     # Count unique skills across all courses of the university
     unique_skills_count = (
         db.query(func.count(distinct(CourseSkill.skill_id)))
@@ -96,7 +98,7 @@ def get_university_metrics(university_id: int, db: Session = Depends(get_db)):
     )
 
     recognized_skills_final = unique_skills_count if unique_skills_count is not None else 0
-   
+
     return {
         "university_id": university_id,
         "total_programs": total_programs,

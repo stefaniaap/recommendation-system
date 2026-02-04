@@ -336,14 +336,16 @@ async def recommend_courses_by_name_safe(
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
 
 
-@router.get("/recommend/degrees/{university_id}", summary="Recommend degrees for a university.")
+@router.get("/recommend/degrees/{university_id}")
 def recommend_degrees(university_id: int, top_n: int = 5, db: Session = Depends(get_db)):
-    """
-    Recommend top N degrees for a university based on recognized skills.
-    """
-    recommender = UniversityRecommender(db)
-    results = recommender.suggest_degrees_with_skills(university_id, top_n=top_n)
-    return {"university_id": university_id, "recommended_degrees": results}
+    try:
+        recommender = UniversityRecommender(db)
+        results = recommender.suggest_degrees_with_skills(university_id, top_n=top_n)
+        return {"university_id": university_id, "recommended_degrees": results}
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 @router.get("/recommendations/university/{univ_id}", summary="Suggest courses for a university.")
