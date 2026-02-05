@@ -212,11 +212,12 @@ function displayRecommendations(recommendations, type, univId) {
                 <div class="card-content-full-width">
                     ${skillsHtml}
                     <div class="action-section-centered">
-                        <button class="recommend-courses-btn green-btn" 
-                                data-degree-name="${itemName}"
-                                data-univ-id="${univId}">
-                            <i class="fas fa-tasks"></i> Generate Course Recommendations
-                        </button>
+                        <button class="recommend-courses-btn green-btn arrow-btn" 
+                            data-degree-name="${itemName}"
+                            data-univ-id="${univId}">
+                        Generate Course Recommendations <span class="arrow">→</span>
+                    </button>
+
                     </div>
                 </div>
             </li>

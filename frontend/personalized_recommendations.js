@@ -259,7 +259,10 @@ async function displaySkillGraph(data) {
     d3.select("#skillGraph div").remove(); // tooltip αν υπάρχει
 
 
-    const recommended = (data.recommended_programs || []).filter(p => ((p.score || 0) * 100) >= 20);
+    const recommended = (data.recommended_programs || [])
+        .filter(p => ((p.score || 0) * 100) >= 20)
+        .slice(0, 5); // Εδώ περιορίζουμε στα πρώτα 5
+
     if (!recommended.length) return;
 
     const width = document.getElementById("skillGraph").clientWidth;

@@ -25,8 +25,8 @@ function displayCourseHeatmap(courses, topSkillsLimit = 5) {
         validCourses = validCourses.slice(0, maxCoursesToDisplay);
     }
 
+    const canvas = document.getElementById('skillsHeatmapChart');
     if (!validCourses.length) {
-        const canvas = document.getElementById('skillsHeatmapChart');
         if (canvas) canvas.style.display = 'none';
         return;
     }
@@ -37,13 +37,12 @@ function displayCourseHeatmap(courses, topSkillsLimit = 5) {
     const allSkillsCount = compatibleSkillsCount.map((count, i) => count + newSkillsCount[i]);
     const maxSkillsForAxis = Math.max(...allSkillsCount, 1);
 
-    const canvas = document.getElementById('skillsHeatmapChart');
     if (canvas) {
         canvas.style.height = `${(validCourses.length * 35) + 150}px`;
         canvas.style.display = 'block';
     }
 
-    const ctx = canvas ? canvas.getContext('2d') : null;
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const datasets = [
@@ -72,7 +71,7 @@ function displayCourseHeatmap(courses, topSkillsLimit = 5) {
     }
 
     document.querySelector('.chart-title').textContent =
-        ` Skills Heatmap per Course (Top ${validCourses.length} Courses Breakdown)`;
+        ` Skills Gap Analysis: Existing vs. New Skills per Course`;
 
     window.skillsHeatmapChart = new Chart(ctx, {
         type: 'bar',
@@ -185,13 +184,10 @@ async function loadDegreePrograms(univId) {
 
         const degrees = await response.json();
 
-        // 1️⃣ Remove duplicates (key = degree title)
         const uniqueMap = new Map();
-
         degrees.forEach(degree => {
             const title = degree.degree_titles?.[0] || degree.degree_type;
             if (!title) return;
-
             if (!uniqueMap.has(title)) {
                 uniqueMap.set(title, {
                     value: encodeURIComponent(title),
@@ -200,12 +196,10 @@ async function loadDegreePrograms(univId) {
             }
         });
 
-        // 2️⃣ Alphabetical sorting
         const sortedDegrees = [...uniqueMap.values()].sort((a, b) =>
             a.text.localeCompare(b.text, 'el')
         );
 
-        // 3️⃣ Render dropdown
         sortedDegrees.forEach(deg => {
             const option = document.createElement('option');
             option.value = deg.value;
@@ -223,14 +217,24 @@ async function loadDegreePrograms(univId) {
 
 /**
  * Triggered when the user selects a degree
+ * → Εμφανίζει spinner και κρύβει προηγούμενα αποτελέσματα
  */
 document.getElementById('degree-dropdown').addEventListener('change', (event) => {
     const degreeName = event.target.value;
     const params = new URLSearchParams(window.location.search);
     const univId = params.get('univ_id');
-    if (degreeName && univId) {
-        fetchAndDisplayRecommendations(univId, degreeName);
-    }
+    if (!degreeName || !univId) return;
+
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const resultsContainer = document.getElementById('course-recommendation-list');
+    const canvas = document.getElementById('skillsHeatmapChart');
+
+    // Εμφάνιση spinner και απόκρυψη προηγούμενων αποτελεσμάτων
+    loadingSpinner.style.display = 'block';
+    resultsContainer.innerHTML = '';
+    if (canvas) canvas.style.display = 'none';
+
+    fetchAndDisplayRecommendations(univId, degreeName);
 });
 
 /**
@@ -238,6 +242,8 @@ document.getElementById('degree-dropdown').addEventListener('change', (event) =>
  */
 async function fetchAndDisplayRecommendations(univId, degreeName) {
     const listElement = document.getElementById('course-recommendation-list');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const canvas = document.getElementById('skillsHeatmapChart');
 
     const endpoint = `${API_BASE_URL}/recommend/courses/${univId}/${degreeName}`;
     try {
@@ -251,8 +257,9 @@ async function fetchAndDisplayRecommendations(univId, degreeName) {
         console.error("Error loading courses:", error);
         listElement.innerHTML =
             `<li class="course-card" style="border-left-color: #dc3545;">Failed to load data: ${error.message}</li>`;
-        const canvas = document.getElementById('skillsHeatmapChart');
         if (canvas) canvas.style.display = 'none';
+    } finally {
+        loadingSpinner.style.display = 'none';
     }
 }
 

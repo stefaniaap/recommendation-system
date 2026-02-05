@@ -376,16 +376,8 @@ class UniversityRecommender:
     # Suggest degrees with skills (fully optimized)
     # -------------------------------------------------------------------------
     def suggest_degrees_with_skills(self, target_univ_id: int, top_n: int = 5) -> List[Dict[str, Any]]:
-        """
-        Optimized version with:
-        - Correct frequency scoring (percentage of similar universities)
-        - Bulk loading and caching
-        - Parallel skill processing
-        - Domain filtering
-        """
         similar_univs = self.find_similar_universities(target_univ_id, top_n=10)
         target_profile = self.build_university_profile(target_univ_id)
-
         if not target_profile or not similar_univs:
             return []
 
@@ -408,7 +400,6 @@ class UniversityRecommender:
             "science": ["physics", "chemistry", "biology", "mathematics", "geology"],
         }
 
-        # Detect target domain
         target_domain = None
         target_degrees_text = " ".join(target_profile["degrees"]).lower()
         for domain, keywords in DOMAIN_GROUPS.items():
@@ -425,16 +416,13 @@ class UniversityRecommender:
             p = self._profile_cache.get(u["university_id"])
             if not p:
                 continue
-
             p_degrees = set(p["degrees"])
             new_degrees = p_degrees - target_degrees
             p_skills = set(p["skills"])
             new_skills = p_skills - set(target_profile["skills"])
-
             combined_text = " ".join(p["skills"] + p["courses"])
 
             for deg in new_degrees:
-                # Domain filtering
                 if target_domain:
                     deg_lower = deg.lower()
                     deg_domain = None
@@ -443,7 +431,6 @@ class UniversityRecommender:
                             deg_domain = domain
                             break
                     if deg_domain and deg_domain != target_domain:
-                        # Allow some cross-domain exceptions
                         ALLOWED_CROSS_DOMAINS = [
                             ("tech", "business"), ("tech", "science"), ("tech", "arts"),
                             ("science", "business"), ("science", "medicine"),
@@ -461,7 +448,6 @@ class UniversityRecommender:
 
                 overlap = len(deg_skills_lc & target_skills_lc)
                 union_count = len(deg_skills_lc | target_skills_lc)
-
                 if union_count < 3 or overlap < MIN_ABSOLUTE_OVERLAP or (overlap / union_count) < MIN_SKILL_OVERLAP:
                     continue
 
@@ -477,7 +463,6 @@ class UniversityRecommender:
         docs = [degree_texts[d] for d in degrees]
         sims = self._compute_similarity_cached(docs, target_text)
 
-        # Parallel or sequential skill processing
         if len(degrees) > 5:
             degree_skills_map = self._process_degree_skills_parallel(degrees, similar_univ_ids, target_skills_raw)
         else:
@@ -488,15 +473,10 @@ class UniversityRecommender:
         max_skill_bonus = max(degree_skill_bonus.values()) if degree_skill_bonus else 1
 
         for i, deg in enumerate(degrees):
-            # Correct frequency with smoothing
-            # Adjusted frequency: πιο "ευαίσθητο" στις διαφορές
-# Προσθέτουμε 0.5 smoothing αντί για 1 και κλιμακώνουμε με log για να δούμε διαφορές
-            freq_score = degree_freq[deg] / max(total_similar_univs, 1)
-
-
+            freq_score = math.log(1 + degree_freq[deg]) / math.log(1 + total_similar_univs)
+            compat_score = degree_compat[deg] / degree_freq[deg] if degree_freq[deg] else 0
             sim_val = float(sims[i])
             novelty_score = 1.0 / (1.0 + math.exp(-5 * (1.0 - sim_val - 0.5)))
-            compat_score = degree_compat[deg] / degree_freq[deg] if degree_freq[deg] else 0
             skill_enrichment_score = degree_skill_bonus[deg] / max_skill_bonus
 
             total_score = (

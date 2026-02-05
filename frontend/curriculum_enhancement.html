@@ -383,6 +383,41 @@
                 margin: 0;
             }
         }
+
+        .spinner-container {
+            display: none;
+            /* Κρύβεται αρχικά */
+            text-align: center;
+            margin: 50px 0;
+        }
+
+        .spinner {
+            margin: 0 auto 15px auto;
+            width: 50px;
+            height: 50px;
+            border: 6px solid #cce5ff;
+            /* Ανοιχτό μπλε background */
+            border-top: 6px solid #00ffaa;
+            /* Πιο έντονο μπλε περιστροφή */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #loading-spinner p {
+            color: #007bff;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
     </style>
 </head>
 
@@ -455,9 +490,11 @@
             <h2 id="courses-title">Loading Course Recommendations...</h2>
 
             <!-- Loading Spinner -->
-            <div id="loading-spinner" style="text-align: center; margin: 50px 0;">
-                <p></p>
+            <div id="loading-spinner" class="spinner-container">
+                <div class="spinner"></div>
+                <p>Loading data...</p>
             </div>
+
 
             <!-- Dynamic Course Recommendation Cards -->
             <ul id="course-recommendation-list"></ul>

@@ -155,6 +155,42 @@
         /* =====================================================
            Main content styling
            ===================================================== */
+
+        .spinner-container {
+            display: none;
+            /* Αρχικά κρυφό */
+            text-align: center;
+            margin: 50px 0;
+        }
+
+        .spinner {
+            margin: 0 auto 15px auto;
+            width: 50px;
+            height: 50px;
+            border: 6px solid #cce5ff;
+            /* ανοιχτό μπλε background */
+            border-top: 6px solid #6bedac;
+            /* πιο έντονο μπλε περιστροφή */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #loading-spinner p {
+            color: #007bff;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+
         .main-content {
             margin-left: 250px;
             flex-grow: 1;
@@ -462,7 +498,9 @@
             <h2 id="courses-title">Loading Course Recommendations...</h2>
 
             <!-- Loading spinner -->
-            <div id="loading-spinner" style="text-align: center; margin: 50px 0;">
+            <!-- Loading spinner -->
+            <div id="loading-spinner" class="spinner-container">
+                <div class="spinner"></div>
                 <p>Loading data...</p>
             </div>
 
@@ -471,7 +509,7 @@
 
             <!-- Skills heatmap chart -->
             <div id="heatmap-section">
-                <div class="chart-title">Skills Heatmap per Course</div>
+                <div class="chart-title"></div>
                 <div class="chart-container" style="height: 500px;">
                     <canvas id="skillsHeatmapChart" style="width: 100%; height: 100%;"></canvas>
                 </div>
@@ -489,6 +527,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.3.0/dist/chartjs-chart-matrix.min.js"></script>
     <script src="recommended_degree_plan.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.3.0"></script>
 
 </body>
 

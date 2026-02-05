@@ -579,6 +579,21 @@
             margin-left: 0;
             margin-right: 0;
         }
+
+        .arrow-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .arrow-btn .arrow {
+            font-size: 1.3em;
+            transition: transform 0.25s ease;
+        }
+
+        .arrow-btn:hover .arrow {
+            transform: translateX(5px);
+        }
     </style>
 </head>
 
