@@ -8,6 +8,23 @@ from backend.models import (
 )
 
 
+from backend.models import db
+
+# Απενεργοποίηση foreign keys
+db.session.execute('SET FOREIGN_KEY_CHECKS = 0;')
+
+# Καθαρισμός όλων των πινάκων με σωστή σειρά
+db.session.query(CourseSkill).delete()
+db.session.query(SkillOccupation).delete()
+db.session.query(Course).delete()
+db.session.query(DegreeProgram).delete()
+db.session.query(Skill).delete()
+db.session.query(Occupation).delete()
+db.session.query(University).delete()
+
+# Επανενεργοποίηση foreign keys
+db.session.execute('SET FOREIGN_KEY_CHECKS = 1;')
+db.session.commit()
 
 def get_or_create(db: Session, model, where: dict, values: dict = None):
     instance = db.execute(select(model).filter_by(**where)).scalar_one_or_none()
