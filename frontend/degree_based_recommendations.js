@@ -217,8 +217,8 @@ async function performSearch() {
             card.innerHTML = `
                 <h4>${course.course_name}</h4>
                 <p><strong>Score:</strong> ${course.score.toFixed(3)}</p>
-                ${course.skills?.length ? `<p><strong>Skills:</strong> ${course.skills.join(', ')}</p>` : ''}
-                ${course.matching_skills?.length ? `<p><strong>Matching Skills:</strong> ${course.matching_skills.join(', ')}</p>` : ''}
+                ${course.skills?.length ? `<p><strong>Matching Skills:</strong> ${course.skills.join(', ')}</p>` : ''}
+               
             `;
 
             if (course.website) {

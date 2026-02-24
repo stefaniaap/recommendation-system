@@ -23,54 +23,37 @@ function scoreToCourseColor(score) {
 // Shows all skills with indication of which courses cover them
 // ΠΛΕΟΝΕΚΤΗΜΑΤΑ: Πιο κατανοητό από όλα, skills-focused
 // =====================================================
-function displayOption3_StackedHorizontalBar(courses) {
+// =====================================================
+// ΣΩΣΤΗ ΟΠΤΙΚΟΠΟΙΗΣΗ: Top Recommended Courses
+// Δείχνει ποια μαθήματα να προσθέσεις στο νέο πτυχίο
+// =====================================================
+function displayRecommendedCoursesChart(courses) {
     const ctx = document.getElementById("skillsHeatmapChart").getContext("2d");
 
-    // Safely destroy existing chart
+    // Destroy existing chart
     if (window.skillsHeatmapChart && typeof window.skillsHeatmapChart.destroy === 'function') {
         window.skillsHeatmapChart.destroy();
     }
 
-    // Collect all unique skills
-    const allSkills = Array.from(new Set(
-        courses.flatMap(c => [
-            ...(c.new_skills || []),
-            ...(c.compatible_skills || [])
-        ])
-    )).sort();
+    // Πάρε τα top 10 μαθήματα
+    const topCourses = courses.slice(0, 10);
 
-    // Limit to top 15 skills for readability
-    const topSkills = allSkills.slice(0, 15);
-
-    // For each skill, count how many courses have it as new vs compatible
-    const newSkillCounts = topSkills.map(skill => {
-        return courses.filter(c => (c.new_skills || []).includes(skill)).length;
-    });
-
-    const compatibleSkillCounts = topSkills.map(skill => {
-        return courses.filter(c => (c.compatible_skills || []).includes(skill)).length;
-    });
+    // Ετοίμασε τα data
+    const labels = topCourses.map(c => c.course_name || 'Unknown Course');
+    const scores = topCourses.map(c => c.score || 0);
+    const colors = topCourses.map(c => scoreToCourseColor(c.score || 0));
 
     window.skillsHeatmapChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: topSkills,
-            datasets: [
-                {
-                    label: 'Courses introducing Emerging Skills',
-                    data: newSkillCounts,
-                    backgroundColor: 'rgba(40, 167, 69, 0.85)',
-                    borderColor: 'rgba(40, 167, 69, 1)',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Courses with Compatible Skill',
-                    data: compatibleSkillCounts,
-                    backgroundColor: 'rgba(106, 155, 216, 0.85)',
-                    borderColor: 'rgba(106, 155, 216, 1)',
-                    borderWidth: 1
-                }
-            ]
+            labels: labels,
+            datasets: [{
+                label: 'Recommendation Score',
+                data: scores,
+                backgroundColor: colors,
+                borderColor: colors.map(c => c.replace('rgb', 'rgba').replace(')', ', 1)')),
+                borderWidth: 2
+            }]
         },
         options: {
             indexAxis: 'y', // Horizontal bars
@@ -79,69 +62,87 @@ function displayOption3_StackedHorizontalBar(courses) {
             plugins: {
                 title: {
                     display: true,
-                    text: 'Skills Coverage Across Recommended Courses',
-                    font: { size: 18, weight: 'bold' },
-                    padding: { top: 10, bottom: 20 },
+                    text: 'Top 10 Recommended Courses For The New Degree',
+                    font: { size: 20, weight: 'bold' },
+                    padding: { top: 10, bottom: 30 },
                     color: '#2c3e50'
                 },
                 legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        font: { size: 13 },
-                        padding: 15,
-                        usePointStyle: true
-                    }
+                    display: false // Δεν χρειάζεται legend
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
+                    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                    padding: 16,
+                    titleFont: { size: 14, weight: 'bold' },
+                    bodyFont: { size: 12 },
                     callbacks: {
+                        title: function (context) {
+                            return context[0].label;
+                        },
+                        label: function (context) {
+                            const course = topCourses[context.dataIndex];
+                            const score = (course.score || 0).toFixed(3);
+                            return `Score: ${score}`;
+                        },
                         afterLabel: function (context) {
-                            const skillIdx = context.dataIndex;
-                            const skill = topSkills[skillIdx];
-                            const isNew = context.dataset.label.includes('New');
+                            const course = topCourses[context.dataIndex];
 
-                            const relevantCourses = courses.filter(c => {
-                                if (isNew) return (c.new_skills || []).includes(skill);
-                                return (c.compatible_skills || []).includes(skill);
-                            });
+                            let info = [];
 
-                            if (relevantCourses.length > 0) {
-                                const courseNames = relevantCourses
-                                    .slice(0, 3)
-                                    .map(c => '• ' + (c.course_name || 'Unknown'));
-                                return '\n\nCourses:\n' + courseNames.join('\n');
+                            // Emerging Skills
+                            if (course.new_skills && course.new_skills.length > 0) {
+                                const skillsPreview = course.new_skills.slice(0, 3).join(', ');
+                                const more = course.new_skills.length > 3 ? ` (+${course.new_skills.length - 3} more)` : '';
+                                info.push(`\n Emerging Skills:\n${skillsPreview}${more}`);
                             }
-                            return '';
+
+                            // Compatible Skills
+                            if (course.compatible_skills && course.compatible_skills.length > 0) {
+                                const skillsPreview = course.compatible_skills.slice(0, 3).join(', ');
+                                const more = course.compatible_skills.length > 3 ? ` (+${course.compatible_skills.length - 3} more)` : '';
+                                info.push(`\nCompatible Skills:\n${skillsPreview}${more}`);
+                            }
+
+                            return info.join('\n');
                         }
                     }
                 }
             },
             scales: {
                 x: {
-                    stacked: true,
                     beginAtZero: true,
+                    max: 1,
                     title: {
                         display: true,
-                        text: 'Number of Courses',
-                        font: { size: 13, weight: 'bold' }
+                        text: 'Recommendation Score (0-1)',
+                        font: { size: 14, weight: 'bold' },
+                        color: '#2c3e50'
                     },
                     ticks: {
-                        stepSize: 1
+                        font: { size: 12 }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
                     }
                 },
                 y: {
-                    stacked: true,
                     ticks: {
-                        font: { size: 11 }
+                        font: { size: 11 },
+                        color: '#2c3e50',
+                        // Κόψε τα μεγάλα ονόματα μαθημάτων
+                        callback: function (value, index) {
+                            const label = this.getLabelForValue(value);
+                            return label.length > 40 ? label.substring(0, 37) + '...' : label;
+                        }
+                    },
+                    grid: {
+                        display: false
                     }
                 }
             }
         }
     });
 }
-
 
 // =====================================================
 // Display course recommendations on the page
@@ -193,14 +194,7 @@ function displayCourseRecommendations(courses, degreeName) {
 
     resultsContainer.innerHTML = htmlContent;
 
-    // =====================================================
-    // CHOOSE YOUR VISUALIZATION HERE! 
-    // Uncomment ONE of the following lines:
-    // =====================================================
-
-    // displayOption1_GroupedBarChart(courses);      // Simple & Clear
-    //displayOption2_RadarChart(courses);           // Impressive & Visual
-    displayOption3_StackedHorizontalBar(courses);    // RECOMMENDED - Most Understandable
+    displayRecommendedCoursesChart(courses);
 }
 
 

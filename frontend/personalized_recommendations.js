@@ -289,6 +289,41 @@ async function displaySkillGraph(data) {
         .attr("width", width)
         .attr("height", height);
 
+    // ======================================================
+    // Legend - Υπόμνημα για τους κόμβους
+    // ======================================================
+    const legend = svg.append("g")
+        .attr("class", "legend")
+        .attr("transform", `translate(20, 20)`);
+
+    // Μπλε κύκλος - Προγράμματα Σπουδών
+    legend.append("circle")
+        .attr("cx", 0)
+        .attr("cy", 0)
+        .attr("r", 8)
+        .attr("fill", "#4a90e2");
+
+    legend.append("text")
+        .attr("x", 15)
+        .attr("y", 5)
+        .text("Degree")
+        .attr("font-size", "13px")
+        .attr("fill", "#333");
+
+    // Πράσινος κύκλος - Δεξιότητες
+    legend.append("circle")
+        .attr("cx", 0)
+        .attr("cy", 25)
+        .attr("r", 8)
+        .attr("fill", "#27ae60");
+
+    legend.append("text")
+        .attr("x", 15)
+        .attr("y", 30)
+        .text("Skills")
+        .attr("font-size", "13px")
+        .attr("fill", "#333");
+
     const color = d => d.type === "program" ? "#4a90e2" : "#27ae60";
 
     const simulation = d3.forceSimulation(nodes)
@@ -401,7 +436,4 @@ async function displaySkillGraph(data) {
         });
 
     svg.call(zoom);
-
-
 }
-
