@@ -1,30 +1,35 @@
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, text
+
 from backend.database import SessionLocal, init_db
 from backend.models import (
     University, DegreeProgram, Course,
     Skill, CourseSkill, Occupation, SkillOccupation
 )
 
+# Δημιουργία tables αν δεν υπάρχουν
+init_db()
 
-from backend.models import db
+# Δημιουργία session
+db: Session = SessionLocal()
 
-# Απενεργοποίηση foreign keys
-db.session.execute('SET FOREIGN_KEY_CHECKS = 0;')
+# Αν είσαι σε MySQL μόνο:
+# db.execute(text("SET FOREIGN_KEY_CHECKS=0"))
 
-# Καθαρισμός όλων των πινάκων με σωστή σειρά
-db.session.query(CourseSkill).delete()
-db.session.query(SkillOccupation).delete()
-db.session.query(Course).delete()
-db.session.query(DegreeProgram).delete()
-db.session.query(Skill).delete()
-db.session.query(Occupation).delete()
-db.session.query(University).delete()
+# Καθαρισμός πινάκων
+db.query(CourseSkill).delete()
+db.query(SkillOccupation).delete()
+db.query(Course).delete()
+db.query(DegreeProgram).delete()
+db.query(Skill).delete()
+db.query(Occupation).delete()
+db.query(University).delete()
 
-# Επανενεργοποίηση foreign keys
-db.session.execute('SET FOREIGN_KEY_CHECKS = 1;')
-db.session.commit()
+# Αν είσαι σε MySQL μόνο:
+# db.execute(text("SET FOREIGN_KEY_CHECKS=1"))
+
+db.commit()
 
 def get_or_create(db: Session, model, where: dict, values: dict = None):
     instance = db.execute(select(model).filter_by(**where)).scalar_one_or_none()
